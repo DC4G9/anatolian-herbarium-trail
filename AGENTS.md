@@ -28,3 +28,5 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- The Etnoherba site lives as one self-contained HTML file (src/site/etnoherba.html) served raw by the "/" route server handler; edit that file, not React components, to preserve the original site exactly.

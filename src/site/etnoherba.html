@@ -1,0 +1,1036 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etnoherba - Türkiye Etnobotanik Haritası</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QRCode.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        regionMarmara: '#2e7d32',
+                        regionKaradeniz: '#7cb342',
+                        regionEge: '#29b6f6',
+                        regionIcAnadolu: '#d84315',
+                        regionAkdeniz: '#5e35b1',
+                        regionDoguAnadolu: '#fb8c00',
+                        regionGuneyDogu: '#fdd835',
+                        botanical: {
+                            50: '#f2f7f4',
+                            100: '#e1ede6',
+                            200: '#c5dcd0',
+                            800: '#2a463d',
+                            900: '#1c332c',
+                            950: '#0f1f1a',
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['Cinzel', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #f6f3e8;
+            color: #1c332c;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        #turkey-svg {
+            transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            transform-origin: center center;
+        }
+
+        .region-path {
+            fill: rgba(255,255,255,0);
+            stroke: transparent;
+            stroke-width: 0;
+            vector-effect: non-scaling-stroke;
+            stroke-linejoin: round;
+            cursor: pointer;
+            transition: fill 0.35s ease, stroke 0.35s ease, stroke-width 0.35s ease;
+        }
+
+        .region-path:hover {
+            fill: rgba(255,255,255,0.28);
+            stroke: #064e3b;
+            stroke-width: 3;
+        }
+
+        .region-path.active {
+            fill: rgba(255,255,255,0.08) !important;
+            stroke: #064e3b !important;
+            stroke-width: 4 !important;
+        }
+
+        #turkey-svg.map-focused .region-path:not(.active) {
+            fill: rgba(248,250,246,0.6);
+        }
+
+        /* Marker animation */
+        .plant-pin {
+            animation: bouncePin 2s infinite ease-in-out;
+        }
+
+        @keyframes bouncePin {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .drawer-slide {
+            animation: slideIn 0.35s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+            #qr-print-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
+        }
+        /* ===== Herbology background ===== */
+        .herb-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+            background: radial-gradient(ellipse at top, #fbf9f1 0%, #f3efe1 55%, #ebe8d6 100%); }
+        .herb-bg-img { position: absolute; inset: -6% 0; background: url('/__l5e/assets-v1/a6987518-2e7e-49b4-9904-cde7c4112e1d/herbarium_bg.jpg') center/cover no-repeat;
+            opacity: 0.6; will-change: transform; }
+        .herb-glow { position: absolute; border-radius: 9999px; filter: blur(80px); opacity: 0.35; animation: herbDrift 26s ease-in-out infinite alternate; }
+        .herb-glow.g1 { width: 520px; height: 520px; background: #cfe3c4; top: 10%; left: -120px; }
+        .herb-glow.g2 { width: 460px; height: 460px; background: #e9dfb8; bottom: -80px; right: -100px; animation-delay: -12s; }
+        @keyframes herbDrift { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(60px,-40px,0) scale(1.12); } }
+        .herb-leaf { position: absolute; color: #6b8f5e; opacity: 0.14; animation: leafFloat 18s ease-in-out infinite; }
+        .herb-leaf.l1 { top: 18%; left: 6%; font-size: 26px; }
+        .herb-leaf.l2 { top: 62%; left: 3%; font-size: 22px; animation-delay: -5s; }
+        .herb-leaf.l3 { top: 30%; right: 5%; font-size: 30px; animation-delay: -9s; }
+        .herb-leaf.l4 { top: 78%; right: 8%; font-size: 24px; animation-delay: -3s; }
+        .herb-leaf.l5 { top: 48%; left: 50%; font-size: 18px; animation-delay: -13s; opacity: 0.08; }
+        @keyframes leafFloat { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-28px) rotate(14deg); } }
+
+        #scroll-progress { position: fixed; top: 0; left: 0; height: 3px; width: 100%; z-index: 60;
+            background: linear-gradient(90deg, #16a34a, #84cc16, #eab308); transform-origin: 0 50%; transform: scaleX(0); }
+
+        /* ===== Scroll-triggered reveal ===== */
+        .js-reveal .reveal { opacity: 0; transform: translate3d(0, 34px, 0); filter: blur(6px);
+            transition: opacity 0.9s cubic-bezier(.2,.7,.2,1), transform 0.9s cubic-bezier(.2,.7,.2,1), filter 0.9s ease;
+            transition-delay: var(--rd, 0ms); }
+        .js-reveal .reveal.reveal-scale { transform: scale(0.96) translate3d(0, 24px, 0); }
+        .js-reveal .reveal.is-visible { opacity: 1; transform: none; filter: none; }
+        .split-word { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.08em; }
+        .split-word > span { display: inline-block; transform: translateY(105%); opacity: 0;
+            transition: transform 0.85s cubic-bezier(.2,.8,.2,1), opacity 0.85s ease; transition-delay: var(--wd, 0ms); }
+        .is-visible .split-word > span, .split-word.is-visible > span { transform: none; opacity: 1; }
+        @media (prefers-reduced-motion: reduce) {
+            .js-reveal .reveal, .split-word > span { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
+            .herb-glow, .herb-leaf { animation: none; }
+        }
+        @media print { .herb-bg, #scroll-progress { display: none !important; } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-emerald-200 selection:text-emerald-900">
+    <div id="scroll-progress" aria-hidden="true"></div>
+    <div class="herb-bg" aria-hidden="true"><div class="herb-bg-img"></div><div class="herb-glow g1"></div><div class="herb-glow g2"></div>
+        <i class="fa-solid fa-leaf herb-leaf l1"></i><i class="fa-solid fa-seedling herb-leaf l2"></i><i class="fa-solid fa-leaf herb-leaf l3"></i><i class="fa-solid fa-spa herb-leaf l4"></i><i class="fa-solid fa-leaf herb-leaf l5"></i></div>
+
+    <!-- Header / Navbar -->
+    <header class="bg-botanical-900 text-white sticky top-0 z-50 shadow-md no-print border-b border-botanical-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="resetToHome()">
+                <div class="w-11 h-11 rounded-2xl bg-emerald-600 flex items-center justify-center text-white text-xl shadow-md font-bold">
+                    <i class="fa-solid fa-leaf"></i>
+                </div>
+                <div>
+                    <h1 class="font-serif text-2xl tracking-wider font-bold text-white leading-none">ETNOHERBA</h1>
+                    <p class="text-[11px] text-emerald-300 font-light tracking-widest mt-1">TÜRKİYE COĞRAFİ BİTKİ ENVANTERİ</p>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <nav class="flex items-center space-x-2 sm:space-x-4 text-sm font-medium">
+                <button onclick="switchTab('map-view')" id="nav-map-view" class="px-4 py-2 rounded-xl bg-botanical-800 text-emerald-300 transition-colors flex items-center space-x-2">
+                    <i class="fa-solid fa-map"></i>
+                    <span class="hidden sm:inline">İnteraktif Harita</span>
+                    <span class="sm:hidden">Harita</span>
+                </button>
+                <button onclick="switchTab('qr-hub-view')" id="nav-qr-hub-view" class="px-4 py-2 rounded-xl hover:bg-botanical-800 text-botanical-200 transition-colors flex items-center space-x-2">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span class="hidden sm:inline">QR Kod Baskı Sayfası</span>
+                    <span class="sm:hidden">QR Kodlar</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- VIEW 1: INTERACTIVE MAP VIEW -->
+        <section id="map-view" class="space-y-6">
+            
+            <!-- Information Banner -->
+            <div class="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4 fade-in">
+                <div class="space-y-1 text-center md:text-left">
+                    <h2 class="font-serif text-2xl font-bold text-botanical-950">Türkiye Etnobotanik Haritası</h2>
+                    <p class="text-xs md:text-sm text-slate-600">Ülkemizin 7 coğrafi bölgesinde yetişen özel/endemik bitki türlerini keşfetmek için haritaya tıklayın.</p>
+                </div>
+                
+                <!-- Quick Region Filter Pills -->
+                <div class="flex flex-wrap gap-1.5 justify-center" id="region-badges-container">
+                    <!-- Dynamic badges populated via JS -->
+                </div>
+            </div>
+
+            <!-- Map View Container -->
+            <div class="relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-sky-50 via-slate-50 to-emerald-50 border border-slate-300 shadow-lg min-h-[460px] md:min-h-[560px] flex items-center justify-center p-3">
+                
+                <!-- SVG Map - Detailed Turkish Geography -->
+                <svg id="turkey-svg" viewBox="0 0 1566 783" class="w-full h-auto max-h-[620px] drop-shadow-md select-none" role="img" aria-label="Türkiye Coğrafi Bölgeler Haritası">
+                    <image href="/__l5e/assets-v1/1a3a4f00-c5bb-47b7-8ac6-57d5f462ffad/turkiye_cografi_bolgeler.png" x="0" y="0" width="1566" height="783" preserveAspectRatio="none"/>
+                    <g id="region-marmara" class="region-group" data-region-id="marmara"><title>Marmara Bölgesi</title><path class="region-path" fill-rule="evenodd" d="M206.0,319.5 L200.0,319.5 L196.0,317.5 L187.0,317.5 L184.5,315.0 L186.5,306.0 L185.5,303.0 L182.0,301.5 L180.0,302.5 L164.0,301.5 L156.0,299.5 L149.0,295.5 L143.0,295.5 L135.0,298.5 L127.0,298.5 L124.5,296.0 L124.5,292.0 L127.5,286.0 L135.5,278.0 L137.5,271.0 L134.0,265.5 L125.0,261.5 L98.0,260.5 L91.0,262.5 L69.0,273.5 L50.0,276.5 L39.0,276.5 L36.5,274.0 L40.5,265.0 L44.5,261.0 L45.5,251.0 L43.0,245.5 L41.0,244.5 L39.0,245.5 L32.5,240.0 L35.0,237.5 L39.0,236.5 L44.0,237.5 L47.5,234.0 L48.5,227.0 L51.5,221.0 L49.5,216.0 L59.5,201.0 L56.5,191.0 L59.0,188.5 L67.0,185.5 L70.0,182.5 L86.0,174.5 L94.0,173.5 L99.0,170.5 L105.0,169.5 L106.5,166.0 L103.0,162.5 L90.0,163.5 L84.0,166.5 L79.0,164.5 L75.0,165.5 L73.0,164.5 L65.0,165.5 L60.0,163.5 L54.0,164.5 L47.5,159.0 L48.5,149.0 L47.5,148.0 L53.0,144.5 L53.5,142.0 L56.0,139.5 L58.0,139.5 L66.5,131.0 L67.5,129.0 L66.5,128.0 L71.5,121.0 L72.5,118.0 L71.5,113.0 L73.5,109.0 L72.5,108.0 L73.5,102.0 L71.5,97.0 L74.0,94.5 L77.0,95.5 L82.0,93.5 L89.0,87.5 L90.0,88.5 L95.0,86.5 L97.5,82.0 L95.5,77.0 L96.5,76.0 L95.5,73.0 L97.5,69.0 L95.5,65.0 L90.5,62.0 L91.5,61.0 L90.5,58.0 L80.0,52.5 L76.0,53.5 L72.5,49.0 L84.0,37.5 L91.0,38.5 L96.0,36.5 L97.5,33.0 L96.5,32.0 L102.0,24.5 L111.0,26.5 L115.0,24.5 L122.0,25.5 L127.0,22.5 L129.0,23.5 L133.5,21.0 L134.5,19.0 L133.5,17.0 L136.0,14.5 L145.0,18.5 L151.0,13.5 L157.0,15.5 L163.5,22.0 L162.5,23.0 L163.5,27.0 L170.0,29.5 L173.0,34.5 L176.0,35.5 L185.0,32.5 L189.0,28.5 L193.0,30.5 L197.0,28.5 L198.0,29.5 L202.0,28.5 L207.0,32.5 L210.0,31.5 L213.5,35.0 L214.5,42.0 L209.5,45.0 L208.5,50.0 L212.5,57.0 L211.5,58.0 L212.5,61.0 L216.5,65.0 L215.5,66.0 L216.5,70.0 L226.5,83.0 L231.0,84.5 L236.0,89.5 L238.0,89.5 L241.0,93.5 L243.0,94.5 L245.0,93.5 L248.0,96.5 L257.0,99.5 L262.0,103.5 L277.0,110.5 L280.0,111.5 L286.0,110.5 L294.0,115.5 L299.0,113.5 L304.0,115.5 L310.0,115.5 L324.0,121.5 L331.0,121.5 L341.0,123.5 L348.0,126.5 L358.0,127.5 L371.0,127.5 L374.0,126.5 L381.0,120.5 L395.0,127.5 L404.0,130.5 L414.0,131.5 L424.5,138.0 L423.5,149.0 L427.5,157.0 L427.5,161.0 L402.5,183.0 L396.5,193.0 L389.0,200.5 L371.0,205.5 L365.5,210.0 L361.5,230.0 L361.5,237.0 L357.5,252.0 L356.5,270.0 L353.0,275.5 L336.0,265.5 L303.0,249.5 L281.0,233.5 L275.0,231.5 L269.0,231.5 L264.0,233.5 L254.5,248.0 L248.0,252.5 L243.0,251.5 L230.0,244.5 L222.0,242.5 L217.0,244.5 L215.5,247.0 L213.5,262.0 L208.5,277.0 L207.5,295.0 L211.5,307.0 L211.5,313.0 L206.0,319.5Z"/></g>
+                    <g id="region-black_sea" class="region-group" data-region-id="black_sea"><title>Karadeniz Bölgesi</title><path class="region-path" fill-rule="evenodd" d="M482.0,263.5 L469.0,261.5 L446.0,254.5 L410.0,255.5 L386.0,258.5 L360.0,256.5 L356.5,253.0 L356.5,248.0 L359.5,238.0 L363.5,211.0 L372.0,203.5 L390.0,198.5 L394.5,194.0 L401.5,183.0 L408.0,176.5 L423.5,165.0 L425.5,157.0 L422.5,151.0 L422.5,138.0 L425.0,135.5 L442.0,136.5 L446.0,134.5 L459.0,133.5 L465.5,129.0 L468.5,122.0 L466.5,116.0 L470.0,112.5 L478.0,108.5 L484.0,107.5 L496.0,101.5 L506.0,93.5 L516.0,90.5 L526.0,85.5 L535.0,76.5 L542.0,73.5 L545.0,70.5 L552.0,68.5 L555.0,65.5 L563.0,62.5 L569.0,63.5 L576.0,60.5 L587.0,58.5 L592.0,54.5 L606.0,50.5 L619.0,43.5 L631.0,45.5 L639.0,48.5 L652.0,48.5 L653.0,49.5 L678.0,48.5 L691.0,52.5 L697.0,52.5 L707.0,49.5 L713.0,52.5 L723.0,52.5 L733.0,50.5 L738.5,45.0 L740.5,39.0 L743.0,36.5 L747.0,36.5 L752.0,42.5 L754.0,43.5 L761.0,42.5 L763.5,45.0 L761.0,47.5 L757.0,48.5 L755.5,51.0 L755.5,56.0 L758.5,63.0 L769.0,75.5 L780.0,79.5 L783.0,82.5 L794.0,83.5 L812.0,77.5 L820.0,72.5 L826.0,75.5 L829.5,79.0 L830.5,84.0 L834.5,87.0 L832.5,91.0 L835.5,103.0 L845.0,112.5 L849.0,113.5 L851.5,116.0 L851.5,118.0 L855.0,120.5 L858.0,121.5 L862.0,120.5 L867.5,116.0 L868.5,112.0 L872.0,108.5 L880.0,107.5 L891.0,111.5 L897.0,117.5 L900.0,116.5 L903.5,120.0 L903.5,124.0 L906.0,127.5 L915.0,129.5 L924.0,128.5 L927.0,131.5 L933.0,133.5 L944.0,140.5 L948.5,139.0 L950.5,133.0 L954.0,129.5 L956.0,130.5 L961.0,129.5 L964.5,133.0 L963.5,135.0 L964.5,139.0 L971.0,142.5 L991.0,145.5 L995.0,147.5 L1003.0,146.5 L1008.0,149.5 L1012.0,148.5 L1016.0,149.5 L1025.0,147.5 L1029.0,142.5 L1035.0,144.5 L1038.0,143.5 L1042.0,138.5 L1049.0,136.5 L1053.0,133.5 L1061.0,134.5 L1070.0,129.5 L1078.0,133.5 L1088.0,125.5 L1095.0,126.5 L1102.0,134.5 L1105.0,135.5 L1114.0,133.5 L1119.0,134.5 L1125.0,138.5 L1130.0,136.5 L1137.0,136.5 L1142.0,140.5 L1148.0,141.5 L1162.0,134.5 L1170.0,127.5 L1173.0,126.5 L1176.0,127.5 L1191.0,120.5 L1192.5,117.0 L1201.0,109.5 L1207.0,109.5 L1218.0,104.5 L1225.0,96.5 L1229.0,95.5 L1236.0,87.5 L1240.0,86.5 L1242.5,81.0 L1252.0,70.5 L1265.0,76.5 L1272.0,77.5 L1275.0,76.5 L1282.0,68.5 L1287.0,70.5 L1307.0,69.5 L1319.0,73.5 L1324.0,73.5 L1331.5,82.0 L1333.5,88.0 L1324.5,105.0 L1321.5,117.0 L1321.5,130.0 L1325.5,144.0 L1322.5,164.0 L1320.5,170.0 L1315.5,177.0 L1303.0,189.5 L1289.0,198.5 L1277.0,203.5 L1250.0,203.5 L1249.0,204.5 L1229.0,205.5 L1212.0,212.5 L1181.0,234.5 L1171.0,237.5 L1141.0,241.5 L1101.0,256.5 L1074.0,257.5 L1060.0,260.5 L1046.0,260.5 L1025.0,255.5 L1015.0,251.5 L1000.0,250.5 L992.0,248.5 L979.0,248.5 L944.0,239.5 L926.0,236.5 L908.0,230.5 L896.0,230.5 L895.0,229.5 L877.0,230.5 L856.0,237.5 L823.0,245.5 L803.0,248.5 L794.0,251.5 L788.0,252.5 L780.0,251.5 L767.0,243.5 L756.0,231.5 L748.0,225.5 L736.0,224.5 L724.0,228.5 L713.0,228.5 L706.5,224.0 L705.5,218.0 L713.0,210.5 L727.5,202.0 L731.5,197.0 L734.5,189.0 L734.5,180.0 L732.5,175.0 L725.0,171.5 L718.0,171.5 L698.0,177.5 L676.0,177.5 L666.0,175.5 L650.0,175.5 L640.0,179.5 L636.5,183.0 L631.5,192.0 L622.0,201.5 L618.0,203.5 L603.0,207.5 L570.0,208.5 L561.0,211.5 L546.0,219.5 L516.0,226.5 L497.0,234.5 L493.5,238.0 L490.5,245.0 L490.5,256.0 L485.0,262.5 L482.0,263.5Z"/></g>
+                    <g id="region-aegean" class="region-group" data-region-id="aegean"><title>Ege Bölgesi</title><path class="region-path" fill-rule="evenodd" d="M173.0,588.5 L169.0,588.5 L165.5,584.0 L168.5,579.0 L167.5,576.0 L168.5,573.0 L167.5,570.0 L164.0,568.5 L158.0,569.5 L149.0,567.5 L146.5,569.0 L142.0,576.5 L137.0,574.5 L131.0,574.5 L126.0,576.5 L122.0,575.5 L116.5,571.0 L119.0,567.5 L121.0,567.5 L126.0,562.5 L136.0,563.5 L142.0,558.5 L148.0,562.5 L153.0,561.5 L155.0,559.5 L168.0,561.5 L170.5,560.0 L173.5,552.0 L176.0,549.5 L178.0,548.5 L185.0,549.5 L188.5,546.0 L187.5,543.0 L185.0,541.5 L180.0,542.5 L166.0,540.5 L164.0,541.5 L162.0,540.5 L154.0,543.5 L151.0,542.5 L142.0,543.5 L137.0,542.5 L136.0,543.5 L130.0,542.5 L126.0,538.5 L123.0,537.5 L120.0,538.5 L114.0,544.5 L109.5,541.0 L108.5,532.0 L118.0,522.5 L131.0,527.5 L133.5,526.0 L135.5,520.0 L133.5,513.0 L131.0,510.5 L127.0,509.5 L123.5,506.0 L123.0,503.5 L119.0,502.5 L112.0,504.5 L108.5,501.0 L111.5,496.0 L109.5,491.0 L106.5,488.0 L107.5,484.0 L111.5,479.0 L107.0,473.5 L100.0,471.5 L96.5,468.0 L99.0,464.5 L103.0,465.5 L111.0,464.5 L116.5,461.0 L117.5,457.0 L114.5,451.0 L118.5,446.0 L117.5,440.0 L111.0,438.5 L101.0,429.5 L94.0,428.5 L90.0,430.5 L86.5,427.0 L87.5,424.0 L85.5,418.0 L79.0,413.5 L73.0,414.5 L70.5,421.0 L68.0,423.5 L61.5,419.0 L59.0,413.5 L48.0,409.5 L38.5,402.0 L42.5,399.0 L46.0,393.5 L51.0,397.5 L58.5,394.0 L60.5,388.0 L59.5,385.0 L54.5,381.0 L52.5,377.0 L51.5,368.0 L52.5,364.0 L59.0,359.5 L64.0,360.5 L66.5,363.0 L70.5,369.0 L71.5,375.0 L74.0,377.5 L77.0,378.5 L81.0,376.5 L83.5,379.0 L84.5,383.0 L81.5,388.0 L84.0,394.5 L88.0,395.5 L96.0,393.5 L97.5,391.0 L96.5,386.0 L90.5,374.0 L83.5,367.0 L83.5,361.0 L87.0,357.5 L92.0,355.5 L94.0,356.5 L97.0,355.5 L98.5,352.0 L105.5,347.0 L106.5,344.0 L105.0,340.5 L102.0,339.5 L97.0,341.5 L91.5,337.0 L90.5,333.0 L97.5,323.0 L96.5,319.0 L88.5,313.0 L86.0,305.5 L81.0,304.5 L78.5,302.0 L79.5,301.0 L78.5,295.0 L81.0,292.5 L86.0,294.5 L91.0,293.5 L96.0,285.5 L98.0,285.5 L101.0,281.5 L105.5,280.0 L106.5,277.0 L105.5,275.0 L103.0,273.5 L101.0,274.5 L90.0,273.5 L69.0,276.5 L61.0,279.5 L55.0,278.5 L53.5,277.0 L52.5,276.0 L55.0,273.5 L61.0,273.5 L76.0,269.5 L95.0,259.5 L100.0,258.5 L124.0,259.5 L133.0,263.5 L138.5,270.0 L137.5,277.0 L129.5,285.0 L126.5,290.0 L125.5,294.0 L127.0,296.5 L132.0,297.5 L148.0,293.5 L155.0,297.5 L162.0,299.5 L184.0,300.5 L187.5,304.0 L187.5,309.0 L185.5,313.0 L187.0,315.5 L189.0,316.5 L195.0,315.5 L204.0,318.5 L207.0,317.5 L209.5,313.0 L209.5,305.0 L206.5,297.0 L205.5,285.0 L208.5,271.0 L211.5,264.0 L212.5,251.0 L214.5,246.0 L220.0,241.5 L227.0,241.5 L241.0,249.5 L249.0,250.5 L253.5,248.0 L259.5,237.0 L264.0,232.5 L273.0,229.5 L283.0,233.5 L300.0,246.5 L333.0,262.5 L352.0,273.5 L363.5,284.0 L368.5,292.0 L382.0,307.5 L394.0,313.5 L408.0,317.5 L428.0,326.5 L456.0,344.5 L462.5,351.0 L463.5,354.0 L460.5,360.0 L453.0,366.5 L439.5,375.0 L438.5,385.0 L436.5,389.0 L437.5,392.0 L436.5,398.0 L429.0,405.5 L416.0,415.5 L400.0,423.5 L382.0,429.5 L351.0,436.5 L336.0,449.5 L317.0,461.5 L301.0,474.5 L279.0,487.5 L267.5,498.0 L263.5,504.0 L249.0,518.5 L228.0,532.5 L221.5,539.0 L204.0,568.5 L200.0,566.5 L197.0,567.5 L195.5,570.0 L196.5,572.0 L194.0,574.5 L185.0,578.5 L179.0,586.5 L173.0,588.5Z"/></g>
+                    <g id="region-central_anatolia" class="region-group" data-region-id="central_anatolia"><title>İç Anadolu Bölgesi</title><path class="region-path" fill-rule="evenodd" d="M606.0,562.5 L600.0,562.5 L591.0,558.5 L575.0,547.5 L561.0,535.5 L550.0,528.5 L536.0,522.5 L527.5,515.0 L519.5,501.0 L515.5,486.0 L510.5,477.0 L491.5,459.0 L486.5,451.0 L473.5,438.0 L467.5,430.0 L434.5,399.0 L437.5,388.0 L436.5,384.0 L437.5,376.0 L442.0,371.5 L459.5,360.0 L461.5,355.0 L460.5,349.0 L431.0,329.5 L407.0,318.5 L393.0,314.5 L382.0,308.5 L367.5,292.0 L360.5,281.0 L353.5,275.0 L355.5,266.0 L355.5,257.0 L358.0,254.5 L376.0,256.5 L392.0,256.5 L415.0,253.5 L444.0,252.5 L467.0,259.5 L484.0,261.5 L487.0,260.5 L488.5,257.0 L488.5,246.0 L491.5,239.0 L498.0,232.5 L520.0,223.5 L538.0,220.5 L572.0,206.5 L606.0,205.5 L622.0,200.5 L626.5,197.0 L635.5,183.0 L640.0,178.5 L648.0,174.5 L663.0,173.5 L673.0,175.5 L700.0,175.5 L721.0,169.5 L727.0,170.5 L734.5,176.0 L736.5,180.0 L736.5,187.0 L734.5,194.0 L730.5,200.0 L723.0,206.5 L708.5,215.0 L707.5,218.0 L708.5,225.0 L715.0,227.5 L721.0,227.5 L737.0,222.5 L744.0,222.5 L750.0,225.5 L767.0,242.5 L779.0,249.5 L791.0,250.5 L800.0,247.5 L810.0,246.5 L850.0,237.5 L879.0,228.5 L888.0,227.5 L889.0,228.5 L906.0,228.5 L921.0,233.5 L951.0,239.5 L977.0,246.5 L1013.0,249.5 L1017.0,250.5 L1019.5,253.0 L1013.5,266.0 L1012.5,290.0 L1010.5,295.0 L1005.0,301.5 L986.0,310.5 L942.0,345.5 L905.0,367.5 L875.0,387.5 L863.5,399.0 L850.5,417.0 L837.0,429.5 L800.0,447.5 L788.0,451.5 L761.0,456.5 L744.0,463.5 L740.5,468.0 L737.5,479.0 L724.0,494.5 L700.0,509.5 L644.0,539.5 L614.0,559.5 L606.0,562.5Z"/></g>
+                    <g id="region-mediterranean" class="region-group" data-region-id="mediterranean"><title>Akdeniz Bölgesi</title><path class="region-path" fill-rule="evenodd" d="M850.0,681.5 L838.0,672.5 L832.0,671.5 L827.5,668.0 L831.5,661.0 L830.5,657.0 L814.5,632.0 L821.5,622.0 L829.0,614.5 L832.0,613.5 L849.5,598.0 L847.5,580.0 L845.0,576.5 L835.0,571.5 L829.0,572.5 L817.0,586.5 L813.0,587.5 L811.0,591.5 L805.5,595.0 L804.5,600.0 L797.0,606.5 L789.0,604.5 L781.0,609.5 L777.0,605.5 L772.0,604.5 L752.0,592.5 L749.0,591.5 L743.0,592.5 L740.5,590.0 L739.5,586.0 L736.0,583.5 L729.0,581.5 L724.0,582.5 L715.0,586.5 L711.0,590.5 L708.0,591.5 L703.0,597.5 L695.0,602.5 L685.5,613.0 L685.5,615.0 L675.5,623.0 L674.5,626.0 L675.5,632.0 L665.0,638.5 L661.0,634.5 L658.0,633.5 L655.0,634.5 L653.5,640.0 L642.0,649.5 L637.0,647.5 L631.0,652.5 L625.0,649.5 L619.0,652.5 L615.0,650.5 L611.0,652.5 L599.0,651.5 L596.0,652.5 L591.0,657.5 L579.0,654.5 L570.0,657.5 L566.0,660.5 L557.0,658.5 L549.0,653.5 L535.0,648.5 L524.5,638.0 L523.5,633.0 L518.5,627.0 L515.5,620.0 L511.5,617.0 L511.5,615.0 L506.0,609.5 L503.0,608.5 L502.0,609.5 L493.0,603.5 L487.0,602.5 L481.0,597.5 L478.0,596.5 L476.0,597.5 L467.0,589.5 L459.0,585.5 L453.0,584.5 L448.0,578.5 L442.0,576.5 L429.0,575.5 L423.0,572.5 L399.0,572.5 L394.0,569.5 L390.0,570.5 L386.5,575.0 L384.5,583.0 L385.5,588.0 L383.5,592.0 L385.5,600.0 L381.5,605.0 L377.5,616.0 L378.5,621.0 L380.5,623.0 L376.5,626.0 L376.5,628.0 L371.0,634.5 L369.0,635.5 L366.0,630.5 L359.0,626.5 L351.0,625.5 L344.0,631.5 L340.0,630.5 L332.0,634.5 L330.0,633.5 L324.0,634.5 L320.0,636.5 L316.0,641.5 L311.0,639.5 L306.0,640.5 L302.5,637.0 L302.0,634.5 L291.0,633.5 L279.0,629.5 L270.0,620.5 L264.0,617.5 L257.5,611.0 L259.5,607.0 L258.5,603.0 L260.5,599.0 L259.5,596.0 L257.0,595.5 L252.5,591.0 L257.5,584.0 L256.0,580.5 L250.0,578.5 L245.0,579.5 L242.5,583.0 L243.5,588.0 L240.0,591.5 L233.0,579.5 L230.0,578.5 L226.0,579.5 L222.0,577.5 L219.5,575.0 L220.5,574.0 L219.5,568.0 L217.0,566.5 L214.0,567.5 L211.0,566.5 L207.5,562.0 L213.5,549.0 L220.5,539.0 L232.0,528.5 L254.0,513.5 L266.5,498.0 L283.0,483.5 L305.0,470.5 L317.0,460.5 L341.0,444.5 L349.0,436.5 L358.0,432.5 L380.0,428.5 L404.0,420.5 L420.0,411.5 L435.0,398.5 L474.5,437.0 L487.5,451.0 L492.5,459.0 L511.5,477.0 L516.5,485.0 L523.5,507.0 L532.0,518.5 L554.0,529.5 L579.0,549.5 L598.0,560.5 L608.0,560.5 L617.0,556.5 L647.0,536.5 L680.0,519.5 L725.0,492.5 L735.5,480.0 L739.5,467.0 L745.0,461.5 L759.0,455.5 L793.0,448.5 L811.0,441.5 L841.0,425.5 L846.5,421.0 L857.0,407.5 L866.0,407.5 L878.0,412.5 L885.5,421.0 L889.5,428.0 L893.5,446.0 L896.0,448.5 L903.0,450.5 L925.0,446.5 L958.0,448.5 L960.5,451.0 L961.5,456.0 L963.5,484.0 L961.5,493.0 L957.5,500.0 L948.0,508.5 L932.0,518.5 L926.5,525.0 L923.5,532.0 L922.5,539.0 L924.5,547.0 L933.5,560.0 L936.5,568.0 L937.5,589.0 L935.0,591.5 L931.0,592.5 L927.0,591.5 L922.0,593.5 L918.5,590.0 L917.5,585.0 L914.0,581.5 L911.0,580.5 L906.0,581.5 L892.0,577.5 L888.5,579.0 L883.5,595.0 L885.5,602.0 L882.5,609.0 L882.5,614.0 L886.5,624.0 L892.5,630.0 L894.5,635.0 L890.0,639.5 L880.0,638.5 L869.0,641.5 L867.5,643.0 L866.5,646.0 L868.5,651.0 L867.5,661.0 L865.0,663.5 L864.0,662.5 L862.0,663.5 L859.0,667.5 L857.0,666.5 L853.5,669.0 L852.5,672.0 L853.5,677.0 L850.0,681.5Z"/></g>
+                    <g id="region-eastern_anatolia" class="region-group" data-region-id="eastern_anatolia"><title>Doğu Anadolu Bölgesi</title><path class="region-path" fill-rule="evenodd" d="M1517.0,513.5 L1509.5,501.0 L1510.5,498.0 L1515.5,493.0 L1514.5,489.0 L1512.0,485.5 L1504.0,482.5 L1492.0,483.5 L1488.5,490.0 L1485.0,493.5 L1479.0,496.5 L1475.0,494.5 L1469.0,494.5 L1465.0,496.5 L1458.0,494.5 L1452.0,495.5 L1439.0,489.5 L1434.0,491.5 L1431.0,488.5 L1422.0,485.5 L1414.0,487.5 L1406.0,492.5 L1398.0,491.5 L1393.0,488.5 L1383.0,494.5 L1345.0,485.5 L1325.0,474.5 L1315.5,464.0 L1314.5,457.0 L1319.5,439.0 L1320.5,430.0 L1317.5,423.0 L1313.0,418.5 L1304.0,413.5 L1295.0,410.5 L1233.0,397.5 L1217.0,395.5 L1195.0,395.5 L1168.0,400.5 L1141.0,411.5 L1117.0,430.5 L1107.0,436.5 L1099.0,439.5 L1094.0,438.5 L1086.0,443.5 L1070.0,448.5 L1044.0,453.5 L984.0,452.5 L943.0,448.5 L923.0,448.5 L911.0,451.5 L899.0,451.5 L892.5,446.0 L890.5,442.0 L887.5,427.0 L881.5,417.0 L874.0,411.5 L868.0,409.5 L861.0,409.5 L857.5,406.0 L863.0,398.5 L883.0,380.5 L946.0,341.5 L976.0,316.5 L989.0,307.5 L1006.0,299.5 L1011.5,288.0 L1011.5,267.0 L1016.5,256.0 L1020.0,252.5 L1044.0,258.5 L1062.0,258.5 L1076.0,255.5 L1103.0,254.5 L1139.0,240.5 L1167.0,236.5 L1182.0,232.5 L1215.0,209.5 L1227.0,204.5 L1253.0,201.5 L1263.0,202.5 L1279.0,201.5 L1292.0,195.5 L1303.0,188.5 L1310.5,182.0 L1318.5,171.0 L1322.5,157.0 L1323.5,141.0 L1319.5,129.0 L1319.5,119.0 L1323.5,104.0 L1331.5,90.0 L1330.5,83.0 L1323.5,74.0 L1327.5,67.0 L1328.5,64.0 L1327.5,63.0 L1331.0,58.5 L1337.0,55.5 L1339.0,56.5 L1347.0,55.5 L1349.5,58.0 L1348.5,62.0 L1350.0,64.5 L1352.0,65.5 L1354.0,64.5 L1364.0,74.5 L1370.0,76.5 L1379.5,83.0 L1378.5,85.0 L1382.0,92.5 L1385.0,93.5 L1391.0,90.5 L1398.0,91.5 L1403.5,97.0 L1404.5,107.0 L1408.0,109.5 L1416.0,111.5 L1421.5,117.0 L1423.5,121.0 L1422.5,122.0 L1423.5,125.0 L1427.5,130.0 L1430.5,137.0 L1427.5,150.0 L1418.5,163.0 L1422.5,169.0 L1421.5,176.0 L1422.5,179.0 L1429.5,186.0 L1430.5,191.0 L1432.5,193.0 L1429.5,198.0 L1430.5,201.0 L1434.0,202.5 L1436.0,201.5 L1447.0,205.5 L1457.0,205.5 L1467.0,202.5 L1468.0,203.5 L1475.0,200.5 L1482.0,200.5 L1489.0,203.5 L1494.0,207.5 L1511.5,225.0 L1504.5,230.0 L1501.5,236.0 L1502.5,243.0 L1499.5,248.0 L1500.5,252.0 L1499.5,258.0 L1501.5,262.0 L1491.0,268.5 L1486.0,266.5 L1476.0,267.5 L1473.0,268.5 L1471.5,272.0 L1476.5,280.0 L1477.5,288.0 L1483.0,289.5 L1486.5,293.0 L1489.5,299.0 L1486.5,309.0 L1488.5,315.0 L1492.5,321.0 L1499.5,326.0 L1497.5,338.0 L1503.5,350.0 L1502.5,353.0 L1504.5,357.0 L1503.5,360.0 L1504.5,368.0 L1508.0,371.5 L1516.0,369.5 L1521.5,374.0 L1515.5,381.0 L1514.5,393.0 L1503.5,417.0 L1504.5,422.0 L1508.0,423.5 L1516.0,422.5 L1519.0,427.5 L1526.0,430.5 L1533.0,429.5 L1538.5,435.0 L1535.5,442.0 L1537.5,451.0 L1540.5,454.0 L1539.5,457.0 L1540.5,463.0 L1546.0,467.5 L1550.0,468.5 L1560.5,479.0 L1557.5,485.0 L1560.5,491.0 L1558.0,493.5 L1551.0,490.5 L1543.0,489.5 L1540.0,490.5 L1535.0,497.5 L1527.0,504.5 L1523.0,505.5 L1522.5,508.0 L1517.0,513.5Z"/></g>
+                    <g id="region-southeastern_anatolia" class="region-group" data-region-id="southeastern_anatolia"><title>Güneydoğu Anadolu Bölgesi</title><path class="region-path" fill-rule="evenodd" d="M955.0,593.5 L938.0,591.5 L935.5,589.0 L934.5,567.0 L930.5,557.0 L921.5,543.0 L921.5,534.0 L925.5,525.0 L936.0,514.5 L952.0,504.5 L959.5,495.0 L961.5,487.0 L961.5,470.0 L958.5,451.0 L961.0,448.5 L978.0,450.5 L1047.0,451.5 L1060.0,449.5 L1079.0,443.5 L1085.0,444.5 L1117.0,429.5 L1136.0,413.5 L1144.0,408.5 L1163.0,400.5 L1178.0,396.5 L1200.0,393.5 L1224.0,394.5 L1285.0,406.5 L1305.0,412.5 L1313.5,418.0 L1318.5,423.0 L1321.5,429.0 L1321.5,438.0 L1316.5,454.0 L1316.5,462.0 L1318.5,467.0 L1324.0,472.5 L1341.0,482.5 L1361.0,488.5 L1380.0,491.5 L1383.5,496.0 L1379.5,500.0 L1375.5,509.0 L1372.0,512.5 L1370.0,512.5 L1367.0,515.5 L1365.0,514.5 L1359.0,517.5 L1357.0,517.5 L1354.5,515.0 L1351.5,508.0 L1352.5,507.0 L1351.5,503.0 L1345.0,501.5 L1342.0,502.5 L1340.5,506.0 L1333.0,513.5 L1315.0,521.5 L1311.0,521.5 L1288.0,528.5 L1283.0,529.5 L1282.0,528.5 L1277.0,530.5 L1271.0,529.5 L1266.0,532.5 L1259.0,529.5 L1250.0,530.5 L1243.0,527.5 L1229.0,528.5 L1223.0,530.5 L1206.0,540.5 L1200.0,541.5 L1184.0,555.5 L1156.0,570.5 L1145.0,573.5 L1136.0,578.5 L1132.0,577.5 L1124.0,580.5 L1114.0,581.5 L1107.0,585.5 L1098.0,583.5 L1097.0,584.5 L1084.0,580.5 L1069.0,583.5 L1063.0,581.5 L1060.0,582.5 L1046.0,570.5 L1029.0,563.5 L1020.0,562.5 L1009.0,565.5 L1000.0,572.5 L994.0,574.5 L981.0,582.5 L980.0,581.5 L970.0,583.5 L955.0,593.5Z"/></g>
+                </svg>
+
+                <!-- EXPANDED REGION OVERLAY DRAWER -->
+                <div id="expanded-region-drawer" class="hidden absolute top-4 left-4 right-4 md:right-auto md:w-96 max-h-[85vh] bg-white/95 backdrop-blur-md border border-slate-200 rounded-3xl shadow-2xl p-5 overflow-y-auto z-40 drawer-slide">
+                    
+                    <!-- Top Drawer Header with Back Arrow Button -->
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100 sticky top-0 bg-white/90 backdrop-blur-sm z-10 pt-1">
+                        <button onclick="resetMapZoom()" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-emerald-600 text-slate-700 hover:text-white flex items-center justify-center transition-all shadow-sm">
+                            <i class="fa-solid fa-arrow-left text-sm"></i>
+                        </button>
+                        <span id="drawer-region-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                            Bölge Detayı
+                        </span>
+                    </div>
+
+                    <!-- Drawer Content -->
+                    <div class="mt-4 space-y-4">
+                        <div>
+                            <h3 id="drawer-region-title" class="font-serif text-2xl font-bold text-slate-900 leading-tight">Marmara Bölgesi</h3>
+                            <p class="text-xs text-slate-500 mt-1">Bu bölgeye ait endemik/yerli bitki türleri listelenmiştir. Detay ve QR kodları için tıklayın.</p>
+                        </div>
+
+                        <!-- Plant list for the active region -->
+                        <div class="space-y-2.5" id="drawer-plants-container">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FLOATING MARKERS CONTAINER LAYER ON SVG -->
+                <div id="markers-layer" class="absolute inset-0 pointer-events-none z-30">
+                    <!-- Dynamic pins placed directly on map coords -->
+                </div>
+
+            </div>
+
+            <!-- AMAÇ / HAKKINDA BÖLÜMÜ -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-bullseye"></i>
+                    </div>
+                    <h3 class="font-serif text-lg font-bold text-botanical-950">Amacımız</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Ülkemizin 7 coğrafi bölgesinde yetişen <strong>endemik ve özel bitki türlerini</strong> herkesin keşfedebilmesini sağlamak. Anadolu'nun binlerce yıllık bitki kültürünü dijital dünyaya taşıyoruz.
+                    </p>
+                </div>
+                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <h3 class="font-serif text-lg font-bold text-botanical-950">Nasıl Çalışır?</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Haritadaki bölgelere tıklayarak bitkileri keşfedin. Her bitkinin <strong>QR kodunu</strong> yazdırıp okuldaki veya doğadaki panolara yerleştirebilir, telefonla okutarak detaylı bilgiye ulaşabilirsiniz.
+                    </p>
+                </div>
+                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-3">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-seedling"></i>
+                    </div>
+                    <h3 class="font-serif text-lg font-bold text-botanical-950">Neden Önemli?</h3>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Türkiye, Avrupa'nın en zengin bitki çeşitliliğine sahip ülkelerinden biridir. <strong>12.000'den fazla bitki türünün</strong> yaklaşık 3.000'i endemiktir. Bu mirası korumak ve tanıtmak hepimizin görevidir.
+                    </p>
+                </div>
+            </div>
+
+            <!-- İSTATİSTİK BÖLÜMÜ -->
+            <div class="bg-gradient-to-br from-botanical-900 to-botanical-950 rounded-3xl p-6 md:p-8 text-white shadow-lg">
+                <div class="text-center mb-6">
+                    <h2 class="font-serif text-2xl md:text-3xl font-bold">Türkiye'nin Bitki Zenginliği</h2>
+                    <p class="text-emerald-300 text-sm mt-1">Anadolu topraklarının sakladığı doğal hazineler</p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white/10 rounded-2xl p-4 text-center backdrop-blur-sm">
+                        <div class="text-3xl md:text-4xl font-bold text-emerald-300">~12.000</div>
+                        <div class="text-xs md:text-sm text-slate-300 mt-1">Bitki Türü</div>
+                    </div>
+                    <div class="bg-white/10 rounded-2xl p-4 text-center backdrop-blur-sm">
+                        <div class="text-3xl md:text-4xl font-bold text-emerald-300">~3.000</div>
+                        <div class="text-xs md:text-sm text-slate-300 mt-1">Endemik Tür</div>
+                    </div>
+                    <div class="bg-white/10 rounded-2xl p-4 text-center backdrop-blur-sm">
+                        <div class="text-3xl md:text-4xl font-bold text-emerald-300">7</div>
+                        <div class="text-xs md:text-sm text-slate-300 mt-1">Coğrafi Bölge</div>
+                    </div>
+                    <div class="bg-white/10 rounded-2xl p-4 text-center backdrop-blur-sm">
+                        <div class="text-3xl md:text-4xl font-bold text-emerald-300">%33</div>
+                        <div class="text-xs md:text-sm text-slate-300 mt-1">Endemizm Oranı</div>
+                    </div>
+                </div>
+                <p class="text-center text-xs text-slate-400 mt-5 italic">
+                    <i class="fa-solid fa-info-circle mr-1"></i>
+                    "Türkiye, Avrupa kıtasının tamamında bulunan bitki türü sayısına neredeyse eşit bir zenginliğe sahiptir."
+                </p>
+            </div>
+
+            <!-- NASIL KULLANILIR / REHBER -->
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+                <div class="text-center mb-6">
+                    <h2 class="font-serif text-2xl font-bold text-botanical-950">Haritayı Nasıl Kullanırım?</h2>
+                    <p class="text-sm text-slate-600 mt-1">3 basit adımda Anadolu bitkilerini keşfedin</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="text-center space-y-2">
+                        <div class="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center text-2xl mx-auto shadow-md">
+                            <i class="fa-solid fa-hand-pointer"></i>
+                        </div>
+                        <h3 class="font-serif font-bold text-botanical-950">1. Bölge Seçin</h3>
+                        <p class="text-xs text-slate-600 px-2">Haritadan veya üstteki renkli etiketlerden bir coğrafi bölge seçin.</p>
+                    </div>
+                    <div class="text-center space-y-2">
+                        <div class="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center text-2xl mx-auto shadow-md">
+                            <i class="fa-solid fa-seedling"></i>
+                        </div>
+                        <h3 class="font-serif font-bold text-botanical-950">2. Bitki İncele</h3>
+                        <p class="text-xs text-slate-600 px-2">Açılan listeden veya haritadaki ikonlardan bir bitki seçip detaylarını okuyun.</p>
+                    </div>
+                    <div class="text-center space-y-2">
+                        <div class="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center text-2xl mx-auto shadow-md">
+                            <i class="fa-solid fa-qrcode"></i>
+                        </div>
+                        <h3 class="font-serif font-bold text-botanical-950">3. QR Kod Al</h3>
+                        <p class="text-xs text-slate-600 px-2">QR Kod Baskı Sayfası'ndan kodları yazdırıp panonuza yerleştirin.</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- VIEW 2: DEDICATED FULL PLANT PAGE -->
+        <section id="plant-page-view" class="space-y-6 hidden">
+            
+            <!-- Top Action Bar -->
+            <div class="flex items-center justify-between no-print flex-wrap gap-2">
+                <button onclick="switchTab('map-view')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center space-x-2">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Haritaya Dön</span>
+                </button>
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.print()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-semibold transition-colors flex items-center space-x-2">
+                        <i class="fa-solid fa-print"></i>
+                        <span class="hidden sm:inline">Sayfayı Yazdır</span>
+                    </button>
+                    <button onclick="copyPlantLink()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-100 transition-colors flex items-center space-x-2">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        <span id="page-share-text">Bağlantıyı Kopyala</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Plant Profile Card -->
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden fade-in">
+                
+                <!-- Hero Header -->
+                <div id="page-hero-bg" class="bg-gradient-to-r from-botanical-950 to-botanical-800 text-white p-6 md:p-10 relative">
+                    <div class="absolute top-4 right-4 opacity-10 text-8xl">
+                        <i class="fa-solid fa-leaf"></i>
+                    </div>
+                    <div class="max-w-4xl space-y-2 relative z-10">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span id="page-region-tag" class="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold tracking-wider">MARMARA BÖLGESİ</span>
+                            <span id="page-status-tag" class="px-3 py-1 rounded-full bg-emerald-500/30 text-emerald-200 text-xs font-semibold">Endemik Tür</span>
+                        </div>
+                        <h1 id="page-turkish-name" class="font-serif text-3xl md:text-5xl font-bold tracking-wide">Kazdağı Göknarı</h1>
+                        <p id="page-scientific-name" class="font-serif italic text-lg md:text-2xl text-emerald-200">Abies nordmanniana subsp. equi-trojani</p>
+                    </div>
+                </div>
+
+                <!-- Detail Grid Layout -->
+                <div class="p-6 md:p-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    
+                    <!-- Left Columns: Detailed Ethnobotanical Text Fields -->
+                    <div class="lg:col-span-2 space-y-6">
+                        
+                        <!-- 1. Geleneksel Kullanım -->
+                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-2">
+                            <h3 class="font-serif text-lg font-bold text-slate-900 flex items-center space-x-2">
+                                <i class="fa-solid fa-mortar-pestle text-emerald-600"></i>
+                                <span>Geleneksel & Etnobotanik Kullanım</span>
+                            </h3>
+                            <p id="page-uses" class="text-slate-700 leading-relaxed text-sm md:text-base">
+                                Detaylı kullanım bilgileri buraya gelecek...
+                            </p>
+                        </div>
+
+                        <!-- 2. Botanik ve Morfolojik Yapı -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 space-y-2">
+                            <h3 class="font-serif text-lg font-bold text-slate-900 flex items-center space-x-2">
+                                <i class="fa-solid fa-leaf text-emerald-600"></i>
+                                <span>Botanik & Morfolojik Özellikler</span>
+                            </h3>
+                            <p id="page-description" class="text-slate-700 leading-relaxed text-sm md:text-base">
+                                Bitki tanım ve özellikleri...
+                            </p>
+                        </div>
+
+                        <!-- 3. Doğal Yetişme Alanı -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 space-y-2">
+                            <h3 class="font-serif text-lg font-bold text-slate-900 flex items-center space-x-2">
+                                <i class="fa-solid fa-mountain-sun text-emerald-600"></i>
+                                <span>Doğal Yetişme Alanı ve Ekosistem</span>
+                            </h3>
+                            <p id="page-habitat" class="text-slate-700 leading-relaxed text-sm md:text-base">
+                                Habitat ve coğrafi dağılımı...
+                            </p>
+                        </div>
+
+                        <!-- 4. Öğrenci Veri & Not Alanı -->
+                        <div class="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-200 space-y-2">
+                            <h3 class="font-serif text-base font-bold text-emerald-950 flex items-center space-x-2">
+                                <i class="fa-solid fa-flask text-emerald-700"></i>
+                                <span>Etken Maddeler ve İnceleme Notları</span>
+                            </h3>
+                            <p id="page-notes" class="text-emerald-900 leading-relaxed text-sm">
+                                Öğrenciler tarafından derlenen etken madde (flavanoid, alkaloid, tanen) ve proje notları buraya eklenecektir.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Column: QR Code Badge -->
+                    <div class="space-y-6">
+                        
+                        <!-- QR Box for Poster -->
+                        <div class="bg-botanical-900 text-white p-6 rounded-3xl shadow-lg text-center flex flex-col items-center justify-between">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold tracking-widest text-emerald-400">Harita Pano QR Kodu</span>
+                                <h4 class="font-serif text-lg font-bold text-white mt-1">Özel Sayfa QR Kodu</h4>
+                                <p class="text-xs text-slate-300 mt-1 mb-4">Bu QR kod doğrudan bu özel bitki sayfasına yönlendirir.</p>
+                            </div>
+                            
+                            <!-- Dynamic QR Image Holder -->
+                            <div id="page-qrcode-box" class="bg-white p-3 rounded-2xl border-4 border-emerald-600 shadow-inner"></div>
+                            
+                            <p id="page-plant-id-tag" class="mt-4 font-mono text-xs text-emerald-300">ID: plant-1</p>
+                        </div>
+
+                        <!-- Summary Fact Card -->
+                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3">
+                            <h4 class="font-serif font-bold text-slate-900 border-b border-slate-200 pb-2">Özet Künye</h4>
+                            <div class="space-y-2 text-xs">
+                                <div>
+                                    <span class="text-slate-400 block uppercase font-bold text-[10px]">Coğrafi Bölge</span>
+                                    <span id="fact-region" class="font-semibold text-slate-800 text-sm">Marmara</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block uppercase font-bold text-[10px]">Latin İsim</span>
+                                    <span id="fact-latin" class="font-serif italic text-slate-800 text-sm">Abies nordmanniana</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block uppercase font-bold text-[10px]">Durum</span>
+                                    <span id="fact-status" class="font-semibold text-emerald-700">Endemik</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+        </section>
+
+        <!-- VIEW 3: PRINTABLE QR CODE HUB -->
+        <section id="qr-hub-view" class="space-y-6 hidden">
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-6">
+                    <div>
+                        <h2 class="font-serif text-2xl md:text-3xl font-bold text-slate-900">QR Kod Yazdırma Sayfası</h2>
+                        <p class="text-sm text-slate-600 mt-1">Haritadaki tüm bitkilere ait QR kodlarını çıktı alıp 7 coğrafi bölge haritanız üzerine yerleştirebilirsiniz.</p>
+                    </div>
+
+                    <button onclick="window.print()" class="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-xl text-sm transition-all shadow-md flex items-center space-x-2 no-print">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Tüm QR Kodları Yazdır</span>
+                    </button>
+                </div>
+
+                <!-- Bölge Filtreleme Butonları -->
+                <div class="flex flex-wrap gap-2 no-print" id="qr-filter-buttons">
+                    <button onclick="filterQrGrid('all')" class="qr-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-botanical-900 text-white transition-all" data-filter="all">Tümü</button>
+                    <button onclick="filterQrGrid('marmara')" class="qr-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 transition-all" data-filter="marmara">Marmara</button>
+                    <button onclick="filterQrGrid('black_sea')" class="qr-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 transition-all" data-filter="black_sea">Karadeniz</button>
+                    <button onclick="filterQrGrid('aegean')" class="qr-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 transition-all" data-filter="aegean">Ege</button>
+                    <button onclick="filterQrGrid('central_anatolia')" class="qr-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 transition-all" data-filter="central_anatolia">İç Anadolu</button>
+                    <button onclick="filterQrGrid('mediterranean')" class="qr-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 transition-all" data-filter="mediterranean">Akdeniz</button>
+                    <button onclick="filterQrGrid('eastern_anatolia')" class="qr-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 transition-all" data-filter="eastern_anatolia">Doğu Anadolu</button>
+                    <button onclick="filterQrGrid('southeastern_anatolia')" class="qr-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 transition-all" data-filter="southeastern_anatolia">Güneydoğu</button>
+                </div>
+
+                <!-- Printable Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="qr-print-grid">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-botanical-950 text-white mt-8 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white text-sm font-bold">
+                            <i class="fa-solid fa-leaf"></i>
+                        </div>
+                        <span class="font-serif text-lg font-bold">ETNOHERBA</span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed">Türkiye'nin endemik ve özel bitki türlerini dijital harita üzerinden keşfetmenizi sağlayan etnobotanik envanter platformu.</p>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-serif font-bold text-emerald-300 text-sm">Hızlı Erişim</h4>
+                    <ul class="space-y-1 text-xs text-slate-400">
+                        <li><button onclick="switchTab('map-view')" class="hover:text-emerald-300 transition-colors"><i class="fa-solid fa-chevron-right text-[8px] mr-1"></i>İnteraktif Harita</button></li>
+                        <li><button onclick="switchTab('qr-hub-view')" class="hover:text-emerald-300 transition-colors"><i class="fa-solid fa-chevron-right text-[8px] mr-1"></i>QR Kod Baskı</button></li>
+                    </ul>
+                </div>
+                <div class="space-y-2">
+                    <h4 class="font-serif font-bold text-emerald-300 text-sm">Bilgi</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">Bu platform, Türkiye'nin bitki çeşitliliğini tanıtmak ve koruma bilincini artırmak amacıyla geliştirilmiştir.</p>
+                    <p class="text-[10px] text-slate-500 mt-2">&copy; 2025 Etnoherba. Tüm hakları saklıdır.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript Data & Logic -->
+    <script>
+        // Bitki Veritabanı - 7 Bölge, 5'er Bitki (35 toplam)
+        const plantDatabase = [
+            // 1. MARMARA BÖLGESİ
+            { id: 'mar-1', regionId: 'marmara', regionName: 'Marmara Bölgesi', turkishName: 'Kazdağı Göknarı', scientificName: 'Abies nordmanniana subsp. equi-trojani', status: 'Endemik', icon: 'fa-tree', pos: { top: '24%', left: '16%' }, uses: 'Ağaç reçinesi ve pusu, geleneksel halk tıbbında göğüs yumuşatıcı, antiseptik yara merhemi olarak kullanılır.', description: 'Kazdağları yükseklerinde yetişen, piramidal yapılı endemik çam türü. 40 metreye kadar boylanabilir, iğne yaprakları koyu yeşil ve parlak, kozalakları silindirik formdadır.', habitat: 'Balıkesir / Çanakkale Kazdağı Milli Parkı. 800-1700 metre arası yüksek kesimlerde saf veya karaçam ile karışık meşcereler oluşturur.' },
+            { id: 'mar-2', regionId: 'marmara', regionName: 'Marmara Bölgesi', turkishName: 'Istranca Meşesi', scientificName: 'Quercus hartwissiana', status: 'Nadir Tür', icon: 'fa-seedling', pos: { top: '15%', left: '12%' }, uses: 'Palamut ve kabukları antiseptik tanen deposudur; boyar madde olarak dokumacılıkta kullanılmıştır. Yaprakları hayvan yemi olarak değerlendirilir.', description: 'Kırklareli Istranca ormanlarının simge geniş yapraklı türü. 20 metre boya ulaşabilen, geniş tepeli, uzun ömürlü bir meşe türüdür.', habitat: 'Kırklareli, Tekirdağ nemli orman tabanları ve dere kenarları. Yıldız Dağları\'nın kuzey yamaçlarında yayılış gösterir.' },
+            { id: 'mar-3', regionId: 'marmara', regionName: 'Marmara Bölgesi', turkishName: 'İstanbul Kardeleni', scientificName: 'Galanthus plicatus subsp. byzantinus', status: 'Endemik Geofit', icon: 'fa-flower-tulip', pos: { top: '18%', left: '22%' }, uses: 'Soğanlarında galantamin alkaloidi içerir; geleneksel ağrı dindirici ve modern nöroloji araştırmalarında yer alır. Alzheimer tedavisinde kullanılan galantamin bu türden elde edilir.', description: 'Erken baharda mor-yeşil desenli beyaz çiçek açan soğanlı tür. 15-25 cm boyunda, sarkık çiçekli, narin yapılı bir geofittir.', habitat: 'İstanbul, Kocaeli, Ömerli nemli çayırlıkları ve orman açıklıkları. Deniz seviyesinden 200 metreye kadar nemli, gölgeli alanlarda yetişir.' },
+            { id: 'mar-4', regionId: 'marmara', regionName: 'Marmara Bölgesi', turkishName: 'Uludağ Göknarı', scientificName: 'Abies alba var. bursa', status: 'Lokal Yerli', icon: 'fa-tree', pos: { top: '32%', left: '20%' }, uses: 'Uçucu yağı üst solunum yolları buğu tedavisinde ve kas gevşetici masaj yağlarında tercih edilir. Odunu hafif ve dayanıklıdır, enstrüman yapımında kullanılır.', description: 'Uludağ subalpin kuşağının baskın kozalaklı türü. 30 metreye kadar boylanan, dar piramidal taçlı, iğne yaprakları gümüşi yeşil bir göknar varyetesi.', habitat: 'Bursa Uludağ yamaçları (1400-1900m). Subalpin kuşakta saf meşcereler oluşturur, kışın kar altında kalır.' },
+            { id: 'mar-5', regionId: 'marmara', regionName: 'Marmara Bölgesi', turkishName: 'Çanakkale Şakayığı', scientificName: 'Paeonia mascula subsp. bodurii', status: 'Lokal Endemik', icon: 'fa-spa', pos: { top: '28%', left: '10%' }, uses: 'Köklerinden hazırlanan geleneksel çaylar sakinleştirici ve spazm çözücü olarak bilinir. Tohumlarından elde edilen yağ cilt bakımında kullanılır.', description: 'Koyu pembe büyük çiçekli yumrulu endemik tür. 40-60 cm boyunda, iri yapraklı, gösterişli çiçeklere sahip otsu bir bitkidir.', habitat: 'Çanakkale Biga Yarımadası ve Kazdağı etekleri. Kayalık yamaçlar ve maki içinde, 200-800 metre arasında yetişir.' },
+
+            // 2. KARADENİZ BÖLGESİ
+            { id: 'kar-1', regionId: 'black_sea', regionName: 'Karadeniz Bölgesi', turkishName: 'Anzer Yayla Çayı', scientificName: 'Thymus praecox subsp. skorpilii', status: 'Aromatik Tıbbi', icon: 'fa-spa', pos: { top: '22%', left: '72%' }, uses: 'Rize yaylalarında soğuk algınlığı ve sindirim için içilen ünlü aromatik çay. Anzer balının lezzet kaynağıdır. Antiseptik ve balgam söktürücü özellikleri vardır.', description: 'Mor çiçekli sürünücü yüksek yayla kekiği. 5-15 cm boyunda, yer örtücü formda, yoğun aromalı, küçük oval yapraklı bir türdür.', habitat: 'Rize Anzer Yaylası (2000m+) ve Doğu Karadeniz\'in yüksek çayırları. Alpin ve subalpin kuşakta, rüzgarlı yamaçlarda yetişir.' },
+            { id: 'kar-2', regionId: 'black_sea', regionName: 'Karadeniz Bölgesi', turkishName: 'Trabzon Hurması (Yaban)', scientificName: 'Diospyros lotus', status: 'Yerli Tür', icon: 'fa-apple-whole', pos: { top: '26%', left: '60%' }, uses: 'Meyveleri kurutularak boğaz ağrısı ve mide rahatsızlıklarında tüketilir. Olgun meyveler müshil etkisi gösterir, çekirdekleri öksürük kesici olarak kullanılır.', description: 'Küçük siyah-turuncu meyveli yaban ağaççık. 10 metreye kadar boylanabilen, yaprak döken, geniş tepeli bir ağaç veya büyük çalı formundadır.', habitat: 'Trabzon, Giresun vadi tabanları ve dere kenarları. Nemli, gölgeli orman altlarında, 0-800 metre arasında yayılış gösterir.' },
+            { id: 'kar-3', regionId: 'black_sea', regionName: 'Karadeniz Bölgesi', turkishName: 'Kastamonu Öksüzotu', scientificName: 'Tussilago farfara', status: 'Tıbbi Çalı', icon: 'fa-leaf', pos: { top: '18%', left: '38%' }, uses: 'Geleneksel öksürük ve bronşit şuruplarının ana hammaddesi. Yapraklarından yapılan çay balgam söktürücü, yumuşatıcı ve iltihap giderici olarak kullanılır.', description: 'Sarı çiçekli dere kenarı bitkisi. Erken ilkbaharda çiçek açar, önce çiçek sonra yaprak verir. Geniş, kalp şeklinde yaprakları vardır.', habitat: 'Kastamonu, Bolu nemli dere yatakları ve nemli topraklar. 0-1500 metre arası, özellikle killi ve nemli topraklarda yetişir.' },
+            { id: 'kar-4', regionId: 'black_sea', regionName: 'Karadeniz Bölgesi', turkishName: 'Rize Ormangülü (Kömürcü)', scientificName: 'Rhododendron ponticum', status: 'Karadeniz Simgesi', icon: 'fa-fan', pos: { top: '20%', left: '78%' }, uses: 'Çiçeklerinden arıların ürettiği "Deli Bal" tıbbi dozlarda tansiyon düşürücü olarak kullanılır. Ancak yüksek dozda zehirlidir. Yaprakları deri tabaklamada kullanılır.', description: 'Mor ve pembe salkım çiçekli yaprak dökmeyen çalı. 5 metreye kadar boylanabilen, parlak yeşil yapraklı, gösterişli çiçekli bir ormangülü türüdür.', habitat: 'Doğu Karadeniz kıyı dağları, özellikle Rize ve Artvin yamaçları. 0-2000 metre arası, asidik topraklarda, sisli ve nemli ortamlarda yetişir.' },
+            { id: 'kar-5', regionId: 'black_sea', regionName: 'Karadeniz Bölgesi', turkishName: 'Artvin Çan Çiçeği', scientificName: 'Campanula troegerae', status: 'Kritik Endemik', icon: 'fa-bell', pos: { top: '24%', left: '84%' }, uses: 'Yöre etnobotaniğinde süs ve yatıştırıcı çay karışımlarında yer alır. Kayalık alanlarda yetişen nadir bir türdür, koruma altındadır.', description: 'Beyaz-pembe çan biçimli dik kayalık endemik türü. 10-30 cm boyunda, çok yıllık, çan şeklinde çiçekleri olan narin bir bitkidir.', habitat: 'Artvin Çoruh Vadisi kayalıkları ve yüksek rakımlı kaya yarıkları. 800-2500 metre arası, kireçtaşı kayalıklarında yetişir.' },
+
+            // 3. EGE BÖLGESİ
+            { id: 'ege-1', regionId: 'aegean', regionName: 'Ege Bölgesi', turkishName: 'Datça Hurması', scientificName: 'Phoenix theophrasti', status: 'Relikt Endemik', icon: 'fa-tree', pos: { top: '62%', left: '16%' }, uses: 'Meyveleri besleyici gıda, yaprakları sepetçilik ve dokumada kullanılır. Çekirdekleri öğütülerek hayvan yemi olarak değerlendirilir. Gövdesi yapı malzemesi olarak kullanılmıştır.', description: 'Akdeniz ve Ege mikroklimalı vadilerinin relikt palmiyesi. 10 metreye kadar boylanan, çok gövdeli, yelpaze yapraklı bir palmiye türüdür.', habitat: 'Muğla Datça ve Bodrum Yarımadası, Gökova Körfezi kıyıları. Deniz seviyesinden 200 metreye kadar, kuraklığa dayanıklı, güneşli yamaçlarda yetişir.' },
+            { id: 'ege-2', regionId: 'aegean', regionName: 'Ege Bölgesi', turkishName: 'İzmir Adaçayı', scientificName: 'Salvia fruticosa', status: 'Tıbbi Aromatik', icon: 'fa-mug-hot', pos: { top: '48%', left: '12%' }, uses: 'Ege kültürünün "Dağ Çayı"; antiseptik, ağız çalkalama suyu ve sindirim çayı. Terlemeyi azaltıcı, gaz giderici ve balgam söktürücü etkileri vardır.', description: 'Gümüşi tüylü yapraklı aromatik çalı. 30-100 cm boyunda, grimsi yeşil yapraklı, morumsu çiçekli, yoğun kokulu bir adaçayı türüdür.', habitat: 'İzmir, Aydın maki örtüsü ve kalkerli yamaçlar. 0-800 metre arası, güneşli, kurak ve taşlık alanlarda yaygın olarak yetişir.' },
+            { id: 'ege-3', regionId: 'aegean', regionName: 'Ege Bölgesi', turkishName: 'Manisa Lalesi', scientificName: 'Tulipa orphanidea', status: 'Koruma Altında', icon: 'fa-flower-tulip', pos: { top: '38%', left: '15%' }, uses: 'Manisa Spil Dağı etnobotanik ve mitolojik simgesi. Süs bitkisi olarak yetiştirilir, soğanları geleneksel tıpta kullanılmıştır. Türkiye\'nin doğal lalelerinden biridir.', description: 'Kırmızı-turuncu taç yapraklı dağ lalesi. 15-30 cm boyunda, çok yıllık soğanlı bir bitki. Çiçekleri kızıl-turuncu, bazen sarı kenarlı, yıldız şeklindedir.', habitat: 'Manisa Spil Dağı Milli Parkı ve çevresi. 800-1500 metre arası, step ve kayalık yamaçlarda, özellikle kalkerli topraklarda yetişir.' },
+            { id: 'ege-4', regionId: 'aegean', regionName: 'Ege Bölgesi', turkishName: 'Kazdağı Damla Sakızı', scientificName: 'Pistacia lentiscus var. chia', status: 'Geleneksel Değer', icon: 'fa-bottle-droplet', pos: { top: '42%', left: '10%' }, uses: 'Reçinesi (Sakız) mide ülseri tedavisi, ağız sağlığı ve mutfakta çeşni olarak kullanılır. Sakız ağacından elde edilen reçine, sakız rakısının da ham maddesidir.', description: 'Çalı formunda reçineli maki türü. 2-3 metre boyunda, herdem yeşil, deri gibi sert yapraklı, kırmızı-siyah meyveli bir çalıdır.', habitat: 'İzmir Çeşme ve Ege adaları karşısı, Sakız Adası. 0-300 metre arası, kurak ve taşlık yamaçlarda, maki içinde yetişir.' },
+            { id: 'ege-5', regionId: 'aegean', regionName: 'Ege Bölgesi', turkishName: 'Muğla Sığla Ağacı (Günlük)', scientificName: 'Liquidambar orientalis', status: 'Relikt Endemik', icon: 'fa-tree', pos: { top: '56%', left: '18%' }, uses: 'Gövdesinden çıkarılan "Sığla Yağı" cilt yaralarında ve tütsü olarak kullanılır. Antibakteriyel ve antifungal özellikleri vardır. Parfümeri ve kozmetikte de kullanılır.', description: 'Çınar yapraklı antik relikt ağaç. 20 metreye kadar boylanabilen, yaprak döken, palmiye benzeri loblu yapraklara sahip bir ağaçtır.', habitat: 'Muğla Fethiye, Köyceğiz göl kenarları ve Marmaris çevresi. 0-500 metre arası, nemli dere yataklarında ve göl kıyılarında yetişir.' },
+
+            // 4. İÇ ANADOLU BÖLGESİ
+            { id: 'ica-1', regionId: 'central_anatolia', regionName: 'İç Anadolu Bölgesi', turkishName: 'Kapadokya Soğanı', scientificName: 'Allium cappadocicum', status: 'Endemik', icon: 'fa-seedling', pos: { top: '42%', left: '40%' }, uses: 'Yöresel çeşni ve iştah açıcı doğal şifa kaynağı. Soğanları ve yaprakları çiğ veya pişirilerek tüketilir. Antibakteriyel ve sindirim kolaylaştırıcı etkileri vardır.', description: 'Pembe küre çiçekli steplere uyumlu geofit. 20-50 cm boyunda, şemsiye şeklinde pembe-mor çiçekleri olan çok yıllık soğanlı bir bitkidir.', habitat: 'Nevşehir, Niğde volkanik stepleri ve Kapadokya peribacaları çevresi. 1000-1500 metre arası, volkanik ve kireçli topraklarda yetişir.' },
+            { id: 'ica-2', regionId: 'central_anatolia', regionName: 'İç Anadolu Bölgesi', turkishName: 'Ankara Şahteresi', scientificName: 'Fumaria anatolica', status: 'Endemik Tıbbi', icon: 'fa-leaf', pos: { top: '30%', left: '34%' }, uses: 'Geleneksel kan temizleyici ve karaciğer destekleyici demlenebilir ot. İdrar söktürücü ve terletici olarak da kullanılır. Halk arasında "şahtere otu" olarak bilinir.', description: 'Narin yapılı pembe çiçekli otsu bitki. 20-50 cm boyunda, ince parçalı yapraklı, pembe-mor çiçekli, tek yıllık bir bitkidir.', habitat: 'Ankara, Nallıhan bozkırları ve tarla kenarları. 500-1200 metre arası, step alanlarda ve ekili arazilerde yabani olarak yetişir.' },
+            { id: 'ica-3', regionId: 'central_anatolia', regionName: 'İç Anadolu Bölgesi', turkishName: 'Tuz Gölü Meyan Otusu', scientificName: 'Glycyrrhiza glabra var. tuzensis', status: 'Halofit Tür', icon: 'fa-root', pos: { top: '48%', left: '38%' }, uses: 'Köklerinden çıkarılan meyan şerbeti göğüs yumuşatıcı ve serinleticidir. Tuzlu topraklarda yetişen bu varyete, tuz toleransı yüksek bir meyan alt türüdür.', description: 'Tuzlu toprağa dayanıklı meyan türü. 1-1.5 metre boyunda, morumsu çiçekli, derin köklü, çok yıllık bir otsu bitkidir.', habitat: 'Tuz Gölü çevresi çorak alanlar ve tuzlu bataklıklar. 900-1000 metre arası, yüksek tuz konsantrasyonlu topraklarda yetişir.' },
+            { id: 'ica-4', regionId: 'central_anatolia', regionName: 'İç Anadolu Bölgesi', turkishName: 'Sivas Kangal Dikeni', scientificName: 'Silybum marianum var. anatolia', status: 'Tıbbi Tohumlu', icon: 'fa-sun', pos: { top: '34%', left: '50%' }, uses: 'Tohumlarındaki silimarin maddesi karaciğer hücrelerini yenileyici olarak bilinir. Karaciğer hastalıklarında destekleyici olarak kullanılır. Tohumları öğütülerek çay yapılır.', description: 'Mor deve dikeni görünümlü otsu tür. 50-150 cm boyunda, dikenli yapraklı, mor çiçekli, tek veya iki yıllık bir bitkidir. Tohumları parlak siyah renklidir.', habitat: 'Sivas, Yozgat yüksek platoları ve bozkır alanları. 1000-1800 metre arası, kurak step ve tarla kenarlarında yetişir.' },
+            { id: 'ica-5', regionId: 'central_anatolia', regionName: 'İç Anadolu Bölgesi', turkishName: 'Eskişehir Geven Otusu', scientificName: 'Astragalus microcephalus', status: 'Kitre Kaynağı', icon: 'fa-compact-disc', pos: { top: '35%', left: '30%' }, uses: 'Gövdesinden sızan "Kitre Gamı" ebru sanatında ve eczacılıkta yapıştırıcı olarak kullanılır. Ayrıca toz halinde kozmetik ve gıda sanayisinde kıvam verici olarak değerlendirilir.', description: 'Dikenli yastık oluşturan bozkır çalısı. 10-30 cm boyunda, yastık formunda, sarı çiçekli, çok yıllık dikenli bir geven türüdür.', habitat: 'Eskişehir, Konya kurak stepleri ve jipsli topraklar. 800-1300 metre arası, bozkırın tipik geven yastıklarını oluşturur.' },
+
+            // 5. AKDENİZ BÖLGESİ
+            { id: 'akd-1', regionId: 'mediterranean', regionName: 'Akdeniz Bölgesi', turkishName: 'Toros Sediri (Katran)', scientificName: 'Cedrus libani', status: 'Korunan Tür', icon: 'fa-tree-city', pos: { top: '72%', left: '40%' }, uses: 'Odunundan elde edilen Katran yağlı merhem, cilt rahatsızlıkları ve antiseptik için kullanılır. Sedir yağı aromaterapide ve solunum yolu rahatsızlıklarında kullanılır.', description: 'Görkemli şemsiyemsi taçlı Toros simgesi ibreli ağaç. 40 metreye kadar boylanabilen, geniş ve yayvan taçlı, kısa iğne yapraklı bir sedir türüdür. Lübnan sediri olarak da bilinir.', habitat: 'Antalya, Mersin Toros Dağları, 1000-2200 metre arası. Saf sedir ormanları oluşturur, kayalık ve kireçli yamaçlarda yetişir.' },
+            { id: 'akd-2', regionId: 'mediterranean', regionName: 'Akdeniz Bölgesi', turkishName: 'Antalya Çiğdemi', scientificName: 'Crocus antalyensis', status: 'Lokal Endemik', icon: 'fa-fan', pos: { top: '68%', left: '32%' }, uses: 'Geleneksel olarak bahar müjdecisi ve şifa çaylarında kullanılır. Çiçekleri süs bitkisi olarak da değerlendirilir. Antalya yöresinde "güz çiğdemi" olarak bilinir.', description: 'Mavi-mor renkli erken açan soğanlı çiçek. 10-15 cm boyunda, çok yıllık, hoş kokulu, açık mavi-mor çiçekli narin bir geofittir.', habitat: 'Antalya Akseki ve Beydağları, 1000-1800 metre arası. Kireçtaşı kayalıklar ve dağ çayırlarında sonbaharda çiçek açar.' },
+            { id: 'akd-3', regionId: 'mediterranean', regionName: 'Akdeniz Bölgesi', turkishName: 'Isparta Gülcülük Gülü', scientificName: 'Rosa x damascena', status: 'Kültür & Tıbbi', icon: 'fa-spa', pos: { top: '60%', left: '28%' }, uses: 'Gül yağı ve gül suyu cilt bakımı, yatıştırıcı ve aromaterapide dünyaca ünlüdür. Isparta gülü Türkiye\'nin en önemli kültür bitkilerinden biridir. Gül suyu tatlılarda ve dini ritüellerde kullanılır.', description: 'Yüksek kokulu katmerli pembe gül. 1-2 metre boyunda, çok yıllık, dikenli çalı formunda, pembe renkli, yoğun kokulu çiçekleri olan bir gül türüdür.', habitat: 'Isparta, Burdur havzası, 900-1200 metre arası. Bu bölge Türkiye gül üretiminin merkezidir. Özel iklim ve toprak koşullarında yetişir.' },
+            { id: 'akd-4', regionId: 'mediterranean', regionName: 'Akdeniz Bölgesi', turkishName: 'Mersin Harnubu (Keçiboynuzu)', scientificName: 'Ceratonia siliqua', status: 'Yerli Akdeniz', icon: 'fa-cubes-stacked', pos: { top: '75%', left: '48%' }, uses: 'Meyve pekmezi kan yapıcı, enerji verici ve öksürük kesicidir. Çekirdekleri gıda sanayisinde kıvam verici (keçiboynuzu gamı) olarak kullanılır. Unu çölyak hastaları için alternatif gıdadır.', description: 'Herdem yeşil sert yapraklı ağaç. 10 metreye kadar boylanabilen, geniş taçlı, kalın ve sert kabuklu baklalar veren bir Akdeniz ağacıdır.', habitat: 'Mersin, Adana kıyı şeridi, 0-500 metre arası. Kuraklığa son derece dayanıklı, kalkerli ve fakir topraklarda yetişir.' },
+            { id: 'akd-5', regionId: 'mediterranean', regionName: 'Akdeniz Bölgesi', turkishName: 'Hatay Defnesi', scientificName: 'Laurus nobilis', status: 'Aromatik Tıbbi', icon: 'fa-feather', pos: { top: '78%', left: '56%' }, uses: 'Yaprak yağından yapılan "Defne Sabunu" antiasit ve cilt rahatlatıcıdır. Defne yaprağı mutfakta baharat olarak, yağı ise sabun ve şampuan yapımında kullanılır. Antik çağda zafer sembolüdür.', description: 'Koyu yeşil aromatik yapraklı maki ağacı. 5-10 metre boylanabilen, herdem yeşil, deri gibi sert ve parlak yapraklı, küçük siyah meyveli bir ağaçtır.', habitat: 'Hatay Samandağ ve Harbiye, 0-600 metre arası. Akdeniz ikliminin hakim olduğu kıyı bölgelerinde, maki içinde ve dere kenarlarında yetişir.' },
+
+            // 6. DOĞU ANADOLU BÖLGESİ
+            { id: 'dog-1', regionId: 'eastern_anatolia', regionName: 'Doğu Anadolu Bölgesi', turkishName: 'Ağrı Ters Lalesi', scientificName: 'Fritillaria imperialis', status: 'Nadir Geofit', icon: 'fa-flower-tulip', pos: { top: '48%', left: '78%' }, uses: 'Doğu kültüründe hüznün simgesi. Kök yumruları geleneksel tıp kayıtlarında dikkatle yer alır. Süs bitkisi olarak bahçelerde yetiştirilir. Kesme çiçek olarak da değerlidir.', description: 'Aşağı bakan çan turuncu çiçekli görkemli lale. 60-100 cm boyunda, çok yıllık, gövde üzerinde taç yaprakları aşağı sarkan turuncu çiçekleri olan gösterişli bir geofittir.', habitat: 'Ağrı, Van, Hakkari dağ stepleri, 1500-2500 metre arası. Yüksek rakımlı, kayalık ve çayırlık alanlarda, özellikle kar erimelerinden sonra yetişir.' },
+            { id: 'dog-2', regionId: 'eastern_anatolia', regionName: 'Doğu Anadolu Bölgesi', turkishName: 'Van Otlu Peynir Otu (Sirmo)', scientificName: 'Allium vineale / Allium dikmenii', status: 'Yöresel Lezzet', icon: 'fa-stroopwafel', pos: { top: '44%', left: '86%' }, uses: 'Van otlu peynirine lezzet ve antibakteriyel koruma veren yaban sarımsağı. Doğal koruyucu ve tat verici olarak yüzyıllardır kullanılır. Sindirim kolaylaştırıcı özelliği vardır.', description: 'Yüksek dağlarda yetişen aromatik yapraklı soğan. 20-40 cm boyunda, çok yıllık, ince uzun yapraklı, hafif sarımsak kokulu bir yabani soğan türüdür.', habitat: 'Van, Bitlis otlakları ve dağ yamaçları, 1500-2500 metre arası. Yüksek rakımlı, nemli çayırlarda, özellikle Van Gölü havzasında yetişir.' },
+            { id: 'dog-3', regionId: 'eastern_anatolia', regionName: 'Doğu Anadolu Bölgesi', turkishName: 'Erzurum Heliz Otu', scientificName: 'Ferula orientalis', status: 'Tıbbi Ot', icon: 'fa-leaf', pos: { top: '36%', left: '68%' }, uses: 'Hayvan yemi ve insan sağlığında sindirim kolaylaştırıcı çay. Gövdesi ve genç sürgünleri yöresel mutfakta tüketilir. Reçinesi geleneksel tıpta kullanılmıştır.', description: 'Sarı şemsiye çiçekli dev otsu tür. 1-2 metre boyunda, kalın gövdesi olan, şemsiye formunda sarı çiçekleri olan, çok yıllık bir bitkidir.', habitat: 'Erzurum, Kars yüksek kayalıkları ve dağ stepleri, 1800-2800 metre arası. Yüksek rakımlı, kurak ve rüzgarlı yamaçlarda yetişir.' },
+            { id: 'dog-4', regionId: 'eastern_anatolia', regionName: 'Doğu Anadolu Bölgesi', turkishName: 'Hakkari Dağ Çayı', scientificName: 'Stachys lavandulifolia', status: 'Aromatik Tıbbi', icon: 'fa-mug-hot', pos: { top: '56%', left: '88%' }, uses: 'Mide ağrıları, kaygı ve uykusuzluk için demlenen dağ çayı. Sakinleştirici ve spazm çözücü etkileri vardır. Hakkari yöresinde geleneksel olarak tüketilir.', description: 'Tüylü pembe salkım çiçekli aromatik ot. 20-50 cm boyunda, gümüşi tüylü yapraklı, pembe-mor çiçekli, çok yıllık bir bitkidir.', habitat: 'Hakkari Cilo Dağları ve çevresi, 1800-3000 metre arası. Yüksek rakımlı, kayalık ve taşlık alanlarda, serin ortamlarda yetişir.' },
+            { id: 'dog-5', regionId: 'eastern_anatolia', regionName: 'Doğu Anadolu Bölgesi', turkishName: 'Kars Sarıçamı', scientificName: 'Pinus sylvestris var. hamata', status: 'Yüksek Dağ Ağacı', icon: 'fa-tree', pos: { top: '30%', left: '80%' }, uses: 'Kozalak şurubu öksürük ve astım yumuşatıcı olarak içilir. İğne yapraklarından elde edilen yağ aromaterapide kullanılır. Odunu inşaat ve mobilyada değerlidir.', description: 'Kırmızımsı kabuklu yüksek irtifa çamı. 20-30 metreye kadar boylanabilen, düz gövdeli, kırmızımsı kabuklu, iğne yapraklı bir çam türüdür.', habitat: 'Kars Sarıkamış Ormanları, 1800-2500 metre arası. Saf sarıçam ormanları oluşturur, soğuğa son derece dayanıklıdır.' },
+
+            // 7. GÜNEYDOĞU ANADOLU BÖLGESİ
+            { id: 'gun-1', regionId: 'southeastern_anatolia', regionName: 'Güneydoğu Anadolu Bölgesi', turkishName: 'Mezopotamya Süseni', scientificName: 'Iris gatesii', status: 'Kritik Endemik', icon: 'fa-sun-plant-wilt', pos: { top: '74%', left: '76%' }, uses: 'Gümüşi mor damarlı dev çiçekleri antik parfümeri ve esans üretiminde yer almıştır. Süs bitkisi olarak yetiştirilir. Kökleri geleneksel tıpta kullanılmıştır.', description: 'Dünyanın en büyük çiçekli endemik süsenlerinden biri. 60-100 cm boyunda, iri gümüşi-mor çiçekli, çok yıllık rizomlu bir bitkidir.', habitat: 'Mardin, Siirt kireçtaşı tepeleri, 800-1400 metre arası. Kuraklığa dayanıklı, kalkerli ve taşlık yamaçlarda yetişir.' },
+            { id: 'gun-2', regionId: 'southeastern_anatolia', regionName: 'Güneydoğu Anadolu Bölgesi', turkishName: 'Şanlıurfa Menengiç (Çitlembik)', scientificName: 'Pistacia terebinthus', status: 'Tıbbi Meyve', icon: 'fa-mug-hot', pos: { top: '72%', left: '68%' }, uses: 'Meyvelerinden kafeinsiz "Menengiç Kahvesi" yapılır; solunum yollarını rahatlatır. Sabun ve yağ üretiminde de kullanılır. Mide rahatsızlıklarına iyi gelir.', description: 'Çalı veya küçük ağaç formundaki reçineli tür. 2-6 metre boyunda, yaprak döken, küçük yuvarlak meyveleri olan, reçineli bir ağaççıktır.', habitat: 'Şanlıurfa, Gaziantep tepeleri, 400-1200 metre arası. Kurak ve taşlık yamaçlarda, maki ve step geçiş bölgelerinde yetişir.' },
+            { id: 'gun-3', regionId: 'southeastern_anatolia', regionName: 'Güneydoğu Anadolu Bölgesi', turkishName: 'Gaziantep Antepfıstığı (Yaban)', scientificName: 'Pistacia vera', status: 'Kültür & Tarım', icon: 'fa-seedling', pos: { top: '70%', left: '62%' }, uses: 'Meyvesi yüksek besleyici değerde; kabuk ekstraktları antioksidandır. Antepfıstığı Türkiye\'nin önemli ihraç ürünüdür. Geleneksel tatlılarda ve çerez olarak tüketilir.', description: 'Kuraklığa son derece dayanıklı sert kabuklu ağaç. 5-10 metre boyunda, yaprak döken, sert kabuklu yeşil iç meyveli bir ağaç türüdür.', habitat: 'Gaziantep, Nizip kurak bağları, 600-1000 metre arası. Kireçli ve kurak topraklarda, düşük nemli bölgelerde yetişir.' },
+            { id: 'gun-4', regionId: 'southeastern_anatolia', regionName: 'Güneydoğu Anadolu Bölgesi', turkishName: 'Diyarbakır Meyan Kökü', scientificName: 'Glycyrrhiza glabra', status: 'Yöresel İçecek', icon: 'fa-root', pos: { top: '65%', left: '72%' }, uses: 'Geleneksel "Meyan Şerbeti" böbrek ve mide dostu yaz serinleticisidir. Öksürük şuruplarında ve tatlandırıcı olarak gıda sanayisinde kullanılır. Serinletici ve yumuşatıcı etkisi vardır.', description: 'Nehir kenarlarında derin kök atan otsu bitki. 1-1.5 metre boyunda, mor çiçekli, derin ve tatlı köklü, çok yıllık otsu bir bitkidir.', habitat: 'Diyarbakır Dicle Havzası, 500-800 metre arası. Nehir kenarlarında ve sulak alanlarda, derin topraklarda yetişir.' },
+            { id: 'gun-5', regionId: 'southeastern_anatolia', regionName: 'Güneydoğu Anadolu Bölgesi', turkishName: 'Mardin Yaban Evzi (Zahter)', scientificName: 'Thymbra spicata', status: 'Aromatik Baharat', icon: 'fa-spa', pos: { top: '78%', left: '70%' }, uses: 'Kahvaltılık zahter baharatı ve demlenebilir şifalı çay. Antiseptik ve sindirim kolaylaştırıcı özellikleri vardır. Güneydoğu mutfağının vazgeçilmez baharatıdır.', description: 'Sert yapılı dik pembe çiçekli aromatik çalı. 20-50 cm boyunda, küçük sert yapraklı, pembe-mor çiçekli, yoğun aromalı bir bitkidir.', habitat: 'Mardin, Şırnak kireçtaşları, 600-1200 metre arası. Kurak ve taşlık yamaçlarda, step ve maki geçiş alanlarında yetişir.' }
+        ];
+
+        // Bölge Zoom Hedefleri
+        const regionZoomTargets = {
+            'marmara': { viewBox: '3 0 454 349', title: 'Marmara Bölgesi', badgeColor: 'bg-emerald-700 text-white' },
+            'black_sea': { viewBox: '327 7 1036 286', title: 'Karadeniz Bölgesi', badgeColor: 'bg-lime-600 text-white' },
+            'aegean': { viewBox: '9 200 484 418', title: 'Ege Bölgesi', badgeColor: 'bg-sky-500 text-white' },
+            'central_anatolia': { viewBox: '324 140 725 452', title: 'İç Anadolu Bölgesi', badgeColor: 'bg-orange-700 text-white' },
+            'mediterranean': { viewBox: '178 369 815 342', title: 'Akdeniz Bölgesi', badgeColor: 'bg-purple-700 text-white' },
+            'eastern_anatolia': { viewBox: '828 26 738 517', title: 'Doğu Anadolu Bölgesi', badgeColor: 'bg-amber-600 text-white' },
+            'southeastern_anatolia': { viewBox: '892 364 521 259', title: 'Güneydoğu Anadolu Bölgesi', badgeColor: 'bg-yellow-500 text-slate-900' }
+        };
+
+        const defaultViewBox = "0 0 1566 783";
+        let activeRegionId = null;
+        let activeQrFilter = 'all';
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderRegionBadges();
+            setupSvgRegionEvents();
+            renderQrHubGrid();
+            checkUrlHash();
+            setupKeyboardNav();
+        });
+
+        function setupKeyboardNav() {
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (activeRegionId) {
+                        resetMapZoom();
+                    } else if (!document.getElementById('plant-page-view').classList.contains('hidden')) {
+                        switchTab('map-view');
+                    }
+                }
+            });
+        }
+
+        // Setup SVG Region Clicks
+        function setupSvgRegionEvents() {
+            document.querySelectorAll('.region-group').forEach(group => {
+                group.addEventListener('click', () => {
+                    const regionId = group.getAttribute('data-region-id');
+                    zoomToRegion(regionId);
+                });
+            });
+        }
+
+        // Zoom into region & show custom floating drawer + pins
+        function zoomToRegion(regionId) {
+            const svg = document.getElementById('turkey-svg');
+            const target = regionZoomTargets[regionId];
+            if (!target) return;
+
+            activeRegionId = regionId;
+            animateViewBox(svg, target.viewBox); svg.classList.add('map-focused');
+
+            // Highlight Active Polygon
+            document.querySelectorAll('.region-path').forEach(p => p.classList.remove('active'));
+            const group = document.getElementById(`region-${regionId}`);
+            if (group) {
+                const path = group.querySelector('.region-path');
+                if (path) path.classList.add('active');
+            }
+
+            // Open Side Drawer
+            const drawer = document.getElementById('expanded-region-drawer');
+            drawer.classList.remove('hidden');
+            drawer.classList.add('drawer-slide');
+
+            document.getElementById('drawer-region-title').innerText = target.title;
+            
+            // Populate plants list inside drawer
+            const container = document.getElementById('drawer-plants-container');
+            container.innerHTML = '';
+
+            const plants = plantDatabase.filter(p => p.regionId === regionId);
+            plants.forEach(plant => {
+                const item = document.createElement('div');
+                item.className = "p-3 rounded-2xl bg-slate-50 border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/40 transition-all cursor-pointer flex items-center justify-between group";
+                item.onclick = () => openPlantPage(plant.id);
+
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-sm font-bold shadow-sm">
+                            <i class="fa-solid ${plant.icon}"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-serif font-bold text-sm text-slate-900 group-hover:text-emerald-700 transition-colors">${plant.turkishName}</h4>
+                            <p class="text-[11px] italic font-serif text-slate-500">${plant.scientificName}</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-emerald-600"></i>
+                `;
+                container.appendChild(item);
+            });
+
+            // Display floating pin markers on SVG layer
+            renderFloatingPins(plants);
+            updateBadgeUI(regionId);
+        }
+
+        // Render interactive markers on map
+        function renderFloatingPins(plants) {
+            const layer = document.getElementById('markers-layer');
+            layer.innerHTML = '';
+
+            plants.forEach(plant => {
+                const pin = document.createElement('div');
+                pin.className = "absolute plant-pin pointer-events-auto cursor-pointer z-30 transform -translate-x-1/2 -translate-y-1/2";
+                pin.style.top = plant.pos.top;
+                pin.style.left = plant.pos.left;
+                pin.onclick = (e) => {
+                    e.stopPropagation();
+                    openPlantPage(plant.id);
+                };
+
+                pin.innerHTML = `
+                    <div class="group relative flex flex-col items-center">
+                        <div class="w-9 h-9 rounded-full bg-slate-900 text-white border-2 border-white shadow-xl flex items-center justify-center text-sm group-hover:bg-emerald-600 group-hover:scale-110 transition-all duration-200">
+                            <i class="fa-solid ${plant.icon}"></i>
+                        </div>
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute bottom-12 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg whitespace-nowrap shadow-lg pointer-events-none z-50">
+                            ${plant.turkishName}
+                            <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+                        </div>
+                    </div>
+                `;
+                layer.appendChild(pin);
+            });
+        }
+
+        // Reset map to full Türkiye overview
+        function resetMapZoom() {
+            const svg = document.getElementById('turkey-svg');
+            animateViewBox(svg, defaultViewBox); svg.classList.remove('map-focused');
+
+            document.querySelectorAll('.region-path').forEach(p => p.classList.remove('active'));
+            const drawer = document.getElementById('expanded-region-drawer');
+            drawer.classList.add('hidden');
+            drawer.classList.remove('drawer-slide');
+            document.getElementById('markers-layer').innerHTML = '';
+
+            activeRegionId = null;
+            updateBadgeUI(null);
+        }
+
+        // Render region Badges
+        function renderRegionBadges() {
+            const container = document.getElementById('region-badges-container');
+            container.innerHTML = '';
+
+            const badgeColors = {
+                'marmara': 'bg-regionMarmara',
+                'black_sea': 'bg-regionKaradeniz',
+                'aegean': 'bg-regionEge',
+                'central_anatolia': 'bg-regionIcAnadolu',
+                'mediterranean': 'bg-regionAkdeniz',
+                'eastern_anatolia': 'bg-regionDoguAnadolu',
+                'southeastern_anatolia': 'bg-regionGuneyDogu'
+            };
+
+            Object.keys(regionZoomTargets).forEach(key => {
+                const btn = document.createElement('button');
+                btn.id = `badge-${key}`;
+                btn.className = `px-2.5 py-1 rounded-xl text-[10px] sm:text-xs font-semibold ${badgeColors[key]} text-white hover:opacity-90 transition-all shadow-sm`;
+                btn.innerText = regionZoomTargets[key].title;
+                btn.onclick = () => zoomToRegion(key);
+                container.appendChild(btn);
+            });
+        }
+
+        function updateBadgeUI(regionId) {
+            const badgeColors = {
+                'marmara': 'bg-regionMarmara',
+                'black_sea': 'bg-regionKaradeniz',
+                'aegean': 'bg-regionEge',
+                'central_anatolia': 'bg-regionIcAnadolu',
+                'mediterranean': 'bg-regionAkdeniz',
+                'eastern_anatolia': 'bg-regionDoguAnadolu',
+                'southeastern_anatolia': 'bg-regionGuneyDogu'
+            };
+
+            Object.keys(regionZoomTargets).forEach(key => {
+                const btn = document.getElementById(`badge-${key}`);
+                if (!btn) return;
+                if (key === regionId) {
+                    btn.className = `px-2.5 py-1 rounded-xl text-[10px] sm:text-xs font-bold bg-slate-900 text-white shadow-md ring-2 ring-emerald-400 ring-offset-1`;
+                } else {
+                    btn.className = `px-2.5 py-1 rounded-xl text-[10px] sm:text-xs font-semibold ${badgeColors[key]} text-white hover:opacity-90 transition-all shadow-sm`;
+                }
+            });
+        }
+
+        // Open Individual Plant Page View
+        function openPlantPage(plantId) {
+            const plant = plantDatabase.find(p => p.id === plantId);
+            if (!plant) return;
+
+            document.getElementById('page-region-tag').innerText = plant.regionName.toUpperCase();
+            document.getElementById('page-status-tag').innerText = plant.status;
+            document.getElementById('page-turkish-name').innerText = plant.turkishName;
+            document.getElementById('page-scientific-name').innerText = plant.scientificName;
+            
+            document.getElementById('page-uses').innerText = plant.uses;
+            document.getElementById('page-description').innerText = plant.description;
+            document.getElementById('page-habitat').innerText = plant.habitat;
+
+            // Hero gradient based on region
+            const heroGradients = {
+                'marmara': 'from-emerald-950 to-emerald-800',
+                'black_sea': 'from-lime-950 to-lime-800',
+                'aegean': 'from-sky-950 to-sky-800',
+                'central_anatolia': 'from-orange-950 to-orange-800',
+                'mediterranean': 'from-purple-950 to-purple-800',
+                'eastern_anatolia': 'from-amber-950 to-amber-800',
+                'southeastern_anatolia': 'from-yellow-950 to-yellow-800'
+            };
+            const heroEl = document.getElementById('page-hero-bg');
+            heroEl.className = `bg-gradient-to-r ${heroGradients[plant.regionId] || 'from-botanical-950 to-botanical-800'} text-white p-6 md:p-10 relative`;
+
+            document.getElementById('fact-region').innerText = plant.regionName;
+            document.getElementById('fact-latin').innerText = plant.scientificName;
+            document.getElementById('fact-status').innerText = plant.status;
+            document.getElementById('page-plant-id-tag').innerText = `ID: ${plant.id}`;
+
+            // Generate Page-specific QR Code
+            const qrBox = document.getElementById('page-qrcode-box');
+            qrBox.innerHTML = '';
+            const pageUrl = `${window.location.origin}${window.location.pathname}#plant=${plant.id}`;
+            new QRCode(qrBox, {
+                text: pageUrl,
+                width: 140,
+                height: 140,
+                colorDark: "#1c332c",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            window.location.hash = `plant=${plant.id}`;
+            switchTab('plant-page-view');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Render QR Code Hub Grid
+        function renderQrHubGrid(filter = 'all') {
+            const container = document.getElementById('qr-print-grid');
+            container.innerHTML = '';
+
+            let plants = plantDatabase;
+            if (filter !== 'all') {
+                plants = plantDatabase.filter(p => p.regionId === filter);
+            }
+
+            plants.forEach(plant => {
+                const card = document.createElement('div');
+                card.className = "border border-slate-200 rounded-2xl p-3 bg-slate-50 flex flex-col items-center text-center space-y-2 cursor-pointer hover:border-emerald-500 hover:shadow-md transition-all";
+                card.onclick = () => openPlantPage(plant.id);
+                
+                card.innerHTML = `
+                    <div id="qr-hub-item-${plant.id}" class="bg-white p-2 rounded-xl border border-slate-200 shadow-sm"></div>
+                    <div>
+                        <span class="text-[9px] font-bold text-emerald-700 block uppercase">${plant.regionName}</span>
+                        <h4 class="font-serif font-bold text-xs text-slate-900 leading-tight">${plant.turkishName}</h4>
+                        <p class="text-[10px] italic font-serif text-slate-500 truncate max-w-[120px] mx-auto">${plant.scientificName}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+
+                setTimeout(() => {
+                    const target = document.getElementById(`qr-hub-item-${plant.id}`);
+                    if (target) {
+                        target.innerHTML = '';
+                        const pageUrl = `${window.location.origin}${window.location.pathname}#plant=${plant.id}`;
+                        new QRCode(target, {
+                            text: pageUrl,
+                            width: 95,
+                            height: 95,
+                            colorDark: "#0f1f1a",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.M
+                        });
+                    }
+                }, 50);
+            });
+        }
+
+        // QR Grid Filtreleme
+        function filterQrGrid(filter) {
+            activeQrFilter = filter;
+            document.querySelectorAll('.qr-filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filter) {
+                    btn.className = "qr-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-botanical-900 text-white transition-all";
+                } else {
+                    btn.className = "qr-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 transition-all";
+                }
+            });
+            renderQrHubGrid(filter);
+        }
+
+        // Tab Switching
+        function switchTab(tabId) {
+            ['map-view', 'plant-page-view', 'qr-hub-view'].forEach(t => {
+                const view = document.getElementById(t);
+                const nav = document.getElementById(`nav-${t}`);
+                if (t === tabId) {
+                    view.classList.remove('hidden');
+                    view.classList.add('fade-in');
+                    if (nav) nav.classList.add('bg-botanical-800', 'text-emerald-300');
+                } else {
+                    view.classList.add('hidden');
+                    view.classList.remove('fade-in');
+                    if (nav) nav.classList.remove('bg-botanical-800', 'text-emerald-300');
+                }
+            });
+
+            if (tabId === 'map-view' && window.location.hash.includes('plant=')) {
+                history.pushState("", document.title, window.location.pathname);
+            }
+        }
+
+        function checkUrlHash() {
+            if (window.location.hash.includes('plant=')) {
+                const plantId = window.location.hash.split('plant=')[1];
+                openPlantPage(plantId);
+            }
+        }
+
+        function resetToHome() {
+            resetMapZoom();
+            switchTab('map-view');
+        }
+
+        function copyPlantLink() {
+            const url = window.location.href;
+            const temp = document.createElement("input");
+            temp.value = url;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand("copy");
+            document.body.removeChild(temp);
+
+            const btnText = document.getElementById('page-share-text');
+            btnText.innerText = "Kopyalandı!";
+            setTimeout(() => btnText.innerText = "Bağlantıyı Kopyala", 2000);
+        }
+    </script>
+    <script>
+    /* Smooth map zoom between regions */
+    function animateViewBox(svg, target) {
+        const from = (svg.getAttribute('viewBox') || '0 0 1566 783').split(/\s+/).map(Number);
+        const to = target.split(/\s+/).map(Number);
+        if (svg._vbAnim) cancelAnimationFrame(svg._vbAnim);
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { svg.setAttribute('viewBox', target); return; }
+        const start = performance.now(), dur = 850;
+        const ease = t => 1 - Math.pow(1 - t, 4);
+        const step = now => {
+            const t = Math.min(1, (now - start) / dur), e = ease(t);
+            svg.setAttribute('viewBox', from.map((v, i) => (v + (to[i] - v) * e).toFixed(2)).join(' '));
+            if (t < 1) svg._vbAnim = requestAnimationFrame(step);
+        };
+        svg._vbAnim = requestAnimationFrame(step);
+    }
+
+    /* Scroll-triggered animations + background parallax */
+    (function () {
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        document.documentElement.classList.add('js-reveal');
+        const skip = el => el.closest('#expanded-region-drawer, #markers-layer, svg, header, #qr-print-grid');
+
+        function splitHeading(h) {
+            if (h.id || h.children.length || h.dataset.split) return;
+            const words = h.textContent.trim().split(/\s+/);
+            h.dataset.split = '1';
+            h.innerHTML = words.map((w, i) => `<span class="split-word"><span style="--wd:${i * 70}ms">${w}</span></span>`).join(' ');
+            h.classList.add('reveal-words');
+        }
+
+        const io = new IntersectionObserver(entries => {
+            entries.forEach(en => {
+                if (en.isIntersecting) { en.target.classList.add('is-visible'); io.unobserve(en.target); countUp(en.target); }
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+
+        function countUp(root) {
+            if (reduce) return;
+            root.querySelectorAll('.text-3xl.font-bold, .md\\:text-4xl').forEach(el => {
+                if (el.dataset.counted) return; el.dataset.counted = '1';
+                const m = el.textContent.match(/^(\D*)([\d.]+)(\D*)$/); if (!m) return;
+                const target = parseInt(m[2].replace(/\./g, ''), 10), t0 = performance.now(), d = 1600;
+                const fmt = n => n.toLocaleString('tr-TR');
+                const tick = now => { const p = Math.min(1, (now - t0) / d), e = 1 - Math.pow(1 - p, 3);
+                    el.textContent = m[1] + fmt(Math.round(target * e)) + m[3]; if (p < 1) requestAnimationFrame(tick); };
+                requestAnimationFrame(tick);
+            });
+        }
+
+        function register() {
+            document.querySelectorAll('main section > div, main .grid > div, footer .grid > div, footer > div').forEach(el => {
+                if (skip(el) || el.classList.contains('reveal')) return;
+                el.classList.add('reveal');
+                if (el.parentElement && el.parentElement.classList.contains('grid')) {
+                    const idx = Array.prototype.indexOf.call(el.parentElement.children, el);
+                    el.style.setProperty('--rd', (idx % 6) * 110 + 'ms');
+                } else el.classList.add('reveal-scale');
+                io.observe(el);
+            });
+            document.querySelectorAll('main h2, main h3').forEach(h => {
+                if (skip(h)) return; splitHeading(h);
+                if (h.classList.contains('reveal-words') && !h.dataset.obs) { h.dataset.obs = '1'; io.observe(h); }
+            });
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', register); else register();
+
+        const bar = document.getElementById('scroll-progress');
+        const bg = document.querySelector('.herb-bg-img');
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (ticking) return; ticking = true;
+            requestAnimationFrame(() => {
+                const y = window.scrollY, max = document.documentElement.scrollHeight - innerHeight;
+                if (bar) bar.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
+                if (bg && !reduce) bg.style.transform = `translate3d(0, ${-y * 0.06}px, 0)`;
+                ticking = false;
+            });
+        }, { passive: true });
+    })();
+    </script>
+</body>
+</html>
+```
